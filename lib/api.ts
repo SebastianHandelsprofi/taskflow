@@ -37,6 +37,18 @@ export async function fetchProfiles() {
   return data ?? []
 }
 
+export async function fetchCurrentProfile() {
+  const sb = createClient()
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) return null
+  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single()
+  if (error) {
+    console.error('Profile fetch error:', error)
+    return null
+  }
+  return data
+}
+
 export async function fetchLeaderboard() {
   const sb = createClient()
   const { data, error } = await sb.from('leaderboard').select('*')
