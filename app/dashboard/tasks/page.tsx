@@ -1,14 +1,13 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { fetchTasks, createTask, updateTask, deleteTask, fetchProfiles } from '@/lib/api'
-import { createClient } from '@/lib/supabase/client'
+import { fetchTasks, createTask, updateTask, deleteTask, fetchProfiles, fetchCurrentProfile } from '@/lib/api'
 
 const CATEGORIES = ['Vertrieb', 'Produktion', 'Kundenservice', 'IT', 'Lager', 'Marketing']
 const PRIORITIES = ['Hoch', 'Mittel', 'Niedrig']
 const STATUSES = ['Offen', 'In Bearbeitung', 'Erledigt', 'Ueberfaellig']
-const CATEGORY_COLORS: Record<string, string> = { 'Vertrieb': '#6c63ff', 'Produktion': '#ff8c42', 'Kundenservice': '#00d4aa', 'IT': '#4ecdc4', 'Lager': '#ffd166', 'Marketing': '#ff6b9d' }
-const STATUS_CFG: Record<string, any> = { 'Offen': { color: 'var(--muted)', bg: '#2a2a3d' }, 'In Bearbeitung': { color: 'var(--yellow)', bg: '#ffd16622' }, 'Erledigt': { color: 'var(--green)', bg: '#00d4aa22' }, 'Ueberfaellig': { color: 'var(--red)', bg: '#ff4d6d22' } }
-const PRIORITY_CFG: Record<string, string> = { 'Hoch': 'var(--red)', 'Mittel': 'var(--yellow)', 'Niedrig': 'var(--green)' }
+const CC: Record<string, string> = { 'Vertrieb': '#6c63ff', 'Produktion': '#ff8c42', 'Kundenservice': '#00d4aa', 'IT': '#4ecdc4', 'Lager': '#ffd166', 'Marketing': '#ff6b9d' }
+const SC: Record<string, any> = { 'Offen': { color: 'var(--muted)', bg: '#2a2a3d' }, 'In Bearbeitung': { color: 'var(--yellow)', bg: '#ffd16622' }, 'Erledigt': { color: 'var(--green)', bg: '#00d4aa22' }, 'Ueberfaellig': { color: 'var(--red)', bg: '#ff4d6d22' } }
+const PC: Record<string, string> = { 'Hoch': 'var(--red)', 'Mittel': 'var(--yellow)', 'Niedrig': 'var(--green)' }
 const EMPTY = { title: '', description: '', category: 'Vertrieb', priority: 'Mittel', status: 'Offen', assignee_id: '', deadline: '', points_value: 80 }
 const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', outline: 'none' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, letterSpacing: '0.08em', textTransform: 'uppercase' }
@@ -25,7 +24,8 @@ export default function TasksPage() {
   const [form, setForm] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [profile, setProfile] = useState<any>(null)
+  const [currentProfile, setCurrentProfile] = useState<any>(null)
+  const [errMsg, setErrMsg] = useState('')
 
   const load = useCallback(async () => {
     const [t, p] = await Promise.all([fetchTasks(), fetchProfiles()])
@@ -36,41 +36,39 @@ export default function TasksPage() {
 
   useEffect(() => {
     load()
-    const sb = createClient()
-    sb.auth.getUser().then(async ({ data }) => {
-      if (data.user) {
-        const { data: prof } = await sb.from('profiles').select('*').eq('id', data.user.id).single()
-        setProfile(prof)
-      }
+    fetchCurrentProfile().then(p => {
+      console.log('Current profile:', p)
+      setCurrentProfile(p)
     })
   }, [load])
 
   async function handleCreate() {
+    setErrMsg('')
     if (!form.title) return
-    if (!profile?.tenant_id) {
-      alert('Kein Tenant gefunden. Bitte neu einloggen.')
+    if (!currentProfile?.tenant_id) {
+      setErrMsg('Profil nicht gefunden. Bitte Seite neu laden.')
       return
     }
     setSaving(true)
     try {
       await createTask({
         title: form.title,
-        description: form.description,
+        description: form.description || null,
         category: form.category,
         priority: form.priority,
-        status: form.status,
+        status: 'Offen',
         assignee_id: form.assignee_id || null,
         deadline: form.deadline || null,
         points_value: form.points_value,
-        tenant_id: profile.tenant_id,
-        created_by: profile.id,
+        tenant_id: currentProfile.tenant_id,
+        created_by: currentProfile.id,
         team: form.category,
       })
       setModal(false)
       setForm(EMPTY)
       load()
     } catch (e: any) {
-      alert('Fehler: ' + e.message)
+      setErrMsg('Fehler: ' + e.message)
     }
     setSaving(false)
   }
@@ -98,9 +96,9 @@ export default function TasksPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.length === 0 && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Keine Aufgaben</div>}
           {filtered.map((task: any) => {
-            const sc = STATUS_CFG[task.status] || STATUS_CFG['Offen']
-            const cc = CATEGORY_COLORS[task.category] || 'var(--accent)'
-            const pc = PRIORITY_CFG[task.priority] || 'var(--muted)'
+            const sc = SC[task.status] || SC['Offen']
+            const cc = CC[task.category] || 'var(--accent)'
+            const pc = PC[task.priority] || 'var(--muted)'
             return (
               <div key={task.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderLeft: `3px solid ${cc}`, borderRadius: 12, padding: 18, display: 'flex', alignItems: 'center', gap: 16 }}>
                 <div style={{ flex: 1 }}>
@@ -129,6 +127,7 @@ export default function TasksPage() {
         <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 480, maxWidth: '90vw' }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Neue Aufgabe</div>
+            {errMsg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 16, background: '#ff4d6d22', color: 'var(--red)', fontSize: 13 }}>{errMsg}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div><label style={lbl}>Titel *</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Aufgabentitel..." /></div>
               <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 70, resize: 'vertical' }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
@@ -138,6 +137,7 @@ export default function TasksPage() {
                 <div><label style={lbl}>Verantwortlicher</label><select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}><option value="">— Wählen —</option>{profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
                 <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
               </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Tenant: {currentProfile?.tenant_id ?? 'wird geladen...'}</div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
