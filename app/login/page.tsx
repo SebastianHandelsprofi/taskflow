@@ -1,10 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { signIn, signUp } from '@/lib/api'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPass] = useState('')
@@ -19,7 +17,7 @@ export default function LoginPage() {
       if (mode === 'login') {
         const { error } = await signIn(email, password)
         if (error) throw error
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       } else {
         const { error } = await signUp(email, password, name)
         if (error) throw error
