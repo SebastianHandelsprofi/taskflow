@@ -1,14 +1,16 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { fetchTasks, createTask, updateTask, deleteTask, fetchProfiles, fetchCurrentProfile } from '@/lib/api'
+import { fetchTasks, createTask, updateTask, deleteTask, fetchProfiles } from '@/lib/api'
+import { createClient } from '@/lib/supabase/client'
 
+const TENANT_ID = '1aa1d675-232e-4375-b246-b41cb76f0beb'
 const CATEGORIES = ['Vertrieb', 'Produktion', 'Kundenservice', 'IT', 'Lager', 'Marketing']
 const PRIORITIES = ['Hoch', 'Mittel', 'Niedrig']
 const STATUSES = ['Offen', 'In Bearbeitung', 'Erledigt', 'Ueberfaellig']
 const CC: Record<string, string> = { 'Vertrieb': '#6c63ff', 'Produktion': '#ff8c42', 'Kundenservice': '#00d4aa', 'IT': '#4ecdc4', 'Lager': '#ffd166', 'Marketing': '#ff6b9d' }
 const SC: Record<string, any> = { 'Offen': { color: 'var(--muted)', bg: '#2a2a3d' }, 'In Bearbeitung': { color: 'var(--yellow)', bg: '#ffd16622' }, 'Erledigt': { color: 'var(--green)', bg: '#00d4aa22' }, 'Ueberfaellig': { color: 'var(--red)', bg: '#ff4d6d22' } }
 const PC: Record<string, string> = { 'Hoch': 'var(--red)', 'Mittel': 'var(--yellow)', 'Niedrig': 'var(--green)' }
-const EMPTY = { title: '', description: '', category: 'Vertrieb', priority: 'Mittel', status: 'Offen', assignee_id: '', deadline: '', points_value: 80 }
+const EMPTY = { title: '', description: '', category: 'Vertrieb', priority: 'Mittel', assignee_id: '', deadline: '', points_value: 80 }
 const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', outline: 'none' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, letterSpacing: '0.08em', textTransform: 'uppercase' }
 
@@ -24,7 +26,7 @@ export default function TasksPage() {
   const [form, setForm] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [currentProfile, setCurrentProfile] = useState<any>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [errMsg, setErrMsg] = useState('')
 
   const load = useCallback(async () => {
@@ -36,19 +38,14 @@ export default function TasksPage() {
 
   useEffect(() => {
     load()
-    fetchCurrentProfile().then(p => {
-      console.log('Current profile:', p)
-      setCurrentProfile(p)
+    createClient().auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null)
     })
   }, [load])
 
   async function handleCreate() {
     setErrMsg('')
     if (!form.title) return
-    if (!currentProfile?.tenant_id) {
-      setErrMsg('Profil nicht gefunden. Bitte Seite neu laden.')
-      return
-    }
     setSaving(true)
     try {
       await createTask({
@@ -60,8 +57,8 @@ export default function TasksPage() {
         assignee_id: form.assignee_id || null,
         deadline: form.deadline || null,
         points_value: form.points_value,
-        tenant_id: currentProfile.tenant_id,
-        created_by: currentProfile.id,
+        tenant_id: TENANT_ID,
+        created_by: userId,
         team: form.category,
       })
       setModal(false)
@@ -137,7 +134,6 @@ export default function TasksPage() {
                 <div><label style={lbl}>Verantwortlicher</label><select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}><option value="">— Wählen —</option>{profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
                 <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
               </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>Tenant: {currentProfile?.tenant_id ?? 'wird geladen...'}</div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => setModal(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
