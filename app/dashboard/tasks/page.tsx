@@ -25,28 +25,53 @@ export default function TasksPage() {
   const [form, setForm] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [currentUser, setCurrentUser] = useState<string | null>(null)
+  const [profile, setProfile] = useState<any>(null)
 
   const load = useCallback(async () => {
     const [t, p] = await Promise.all([fetchTasks(), fetchProfiles()])
-    setTasks(t); setProfiles(p); setLoading(false)
+    setTasks(t)
+    setProfiles(p)
+    setLoading(false)
   }, [])
 
   useEffect(() => {
     load()
-    createClient().auth.getUser().then(({ data }) => setCurrentUser(data.user?.id ?? null))
-  }, [load])
-
-  useEffect(() => {
     const sb = createClient()
-    const channel = sb.channel('tasks-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => load()).subscribe()
-    return () => { sb.removeChannel(channel) }
+    sb.auth.getUser().then(async ({ data }) => {
+      if (data.user) {
+        const { data: prof } = await sb.from('profiles').select('*').eq('id', data.user.id).single()
+        setProfile(prof)
+      }
+    })
   }, [load])
 
   async function handleCreate() {
+    if (!form.title) return
+    if (!profile?.tenant_id) {
+      alert('Kein Tenant gefunden. Bitte neu einloggen.')
+      return
+    }
     setSaving(true)
-    try { await createTask({ ...form, created_by: currentUser, tenant_id: profiles.find(p => p.id === currentUser)?.tenant_id }); setModal(false); setForm(EMPTY) }
-    catch (e) { console.error(e) }
+    try {
+      await createTask({
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        priority: form.priority,
+        status: form.status,
+        assignee_id: form.assignee_id || null,
+        deadline: form.deadline || null,
+        points_value: form.points_value,
+        tenant_id: profile.tenant_id,
+        created_by: profile.id,
+        team: form.category,
+      })
+      setModal(false)
+      setForm(EMPTY)
+      load()
+    } catch (e: any) {
+      alert('Fehler: ' + e.message)
+    }
     setSaving(false)
   }
 
@@ -86,14 +111,14 @@ export default function TasksPage() {
                     {task.assignee && <Tag label={task.assignee.full_name} color="var(--muted)" />}
                   </div>
                 </div>
-                <select value={task.status} onChange={e => updateTask(task.id, { status: e.target.value })} style={{ padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.color}44`, fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
+                <select value={task.status} onChange={e => { updateTask(task.id, { status: e.target.value }); load() }} style={{ padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.color}44`, fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
                   {STATUSES.map(s => <option key={s}>{s}</option>)}
                 </select>
                 <div style={{ textAlign: 'center', minWidth: 56 }}>
                   <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value}</div>
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>Pkt</div>
                 </div>
-                <button onClick={() => deleteTask(task.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16, opacity: 0.5 }}>✕</button>
+                <button onClick={() => { deleteTask(task.id); load() }} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16, opacity: 0.5 }}>✕</button>
               </div>
             )
           })}
