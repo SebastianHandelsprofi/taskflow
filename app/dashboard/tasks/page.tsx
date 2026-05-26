@@ -38,7 +38,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     load()
-    createClient().auth.getUser().then(({ data }) => {
+    createClient().auth.getUser().then(({ data }: { data: any }) => {
       setUserId(data.user?.id ?? null)
     })
   }, [load])
