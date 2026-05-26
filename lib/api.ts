@@ -1,87 +1,73 @@
-import { createClient } from './supabase/client'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
-export async function fetchTasks(filters?: { status?: string; category?: string }) {
-  const sb = createClient()
-  let q = sb.from('tasks').select('*, assignee:profiles!assignee_id(id, full_name, team)').order('created_at', { ascending: false })
-  if (filters?.status) q = q.eq('status', filters.status)
-  if (filters?.category) q = q.eq('category', filters.category)
-  const { data, error } = await q
+const URL = 'https://xxbgmcalobabafdrxjcn.supabase.co'
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4YmdtY2Fsb2JhYmFmZHJ4amNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTA0ODIsImV4cCI6MjA5NTI2NjQ4Mn0.XrD62q_DtiTmInz6SqnHlQ9QPQtZNDaVPATBteoZ9xg'
+
+function sb() { return createSupabaseClient(URL, KEY) }
+
+export async function fetchTasks() {
+  const { data, error } = await sb().from('tasks').select('*, assignee:profiles!assignee_id(id, full_name, team)').order('created_at', { ascending: false })
   if (error) throw error
   return data ?? []
 }
 
 export async function createTask(task: any) {
-  const sb = createClient()
-  const { data, error } = await sb.from('tasks').insert(task).select().single()
+  const { data, error } = await sb().from('tasks').insert(task).select().single()
   if (error) throw error
   return data
 }
 
 export async function updateTask(id: string, updates: any) {
-  const sb = createClient()
-  const { data, error } = await sb.from('tasks').update(updates).eq('id', id).select().single()
+  const { data, error } = await sb().from('tasks').update(updates).eq('id', id).select().single()
   if (error) throw error
   return data
 }
 
 export async function deleteTask(id: string) {
-  const sb = createClient()
-  const { error } = await sb.from('tasks').delete().eq('id', id)
+  const { error } = await sb().from('tasks').delete().eq('id', id)
   if (error) throw error
 }
 
 export async function fetchProfiles() {
-  const sb = createClient()
-  const { data, error } = await sb.from('profiles').select('*').order('points', { ascending: false })
+  const { data, error } = await sb().from('profiles').select('*').order('points', { ascending: false })
   if (error) throw error
   return data ?? []
 }
 
-export async function fetchCurrentProfile() {
-  const sb = createClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return null
-  const { data, error } = await sb.from('profiles').select('*').eq('id', user.id).single()
-  if (error) {
-    console.error('Profile fetch error:', error)
-    return null
-  }
+export async function fetchCurrentProfile(userId: string) {
+  const { data, error } = await sb().from('profiles').select('*').eq('id', userId).single()
+  if (error) return null
   return data
 }
 
 export async function fetchLeaderboard() {
-  const sb = createClient()
-  const { data, error } = await sb.from('leaderboard').select('*')
+  const { data, error } = await sb().from('leaderboard').select('*')
   if (error) throw error
   return data ?? []
 }
 
 export async function fetchAllBadges() {
-  const sb = createClient()
-  const { data, error } = await sb.from('badges').select('*')
+  const { data, error } = await sb().from('badges').select('*')
   if (error) throw error
   return data ?? []
 }
 
 export async function fetchUserBadges(userId: string) {
-  const sb = createClient()
-  const { data, error } = await sb.from('user_badges').select('*, badge:badges(*)').eq('user_id', userId)
+  const { data, error } = await sb().from('user_badges').select('*, badge:badges(*)').eq('user_id', userId)
   if (error) throw error
   return data ?? []
 }
 
 export async function fetchDashboardKPIs() {
-  const sb = createClient()
-  const { data, error } = await sb.from('dashboard_kpis').select('*').single()
+  const { data, error } = await sb().from('dashboard_kpis').select('*').single()
   if (error) throw error
   return data
 }
 
 export async function fetchWeeklyActivity() {
-  const sb = createClient()
   const weekAgo = new Date()
   weekAgo.setDate(weekAgo.getDate() - 7)
-  const { data, error } = await sb.from('tasks').select('completed_at').eq('status', 'Erledigt').gte('completed_at', weekAgo.toISOString())
+  const { data, error } = await sb().from('tasks').select('completed_at').eq('status', 'Erledigt').gte('completed_at', weekAgo.toISOString())
   if (error) throw error
   const days = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
   const counts: Record<string, number> = {}
@@ -96,24 +82,25 @@ export async function fetchWeeklyActivity() {
 }
 
 export async function fetchActiveChallenges() {
-  const sb = createClient()
   const today = new Date().toISOString().split('T')[0]
-  const { data, error } = await sb.from('challenges').select('*').lte('starts_at', today).gte('ends_at', today)
+  const { data, error } = await sb().from('challenges').select('*').lte('starts_at', today).gte('ends_at', today)
   if (error) throw error
   return data ?? []
 }
 
 export async function signIn(email: string, password: string) {
-  const sb = createClient()
-  return sb.auth.signInWithPassword({ email, password })
+  return sb().auth.signInWithPassword({ email, password })
 }
 
 export async function signUp(email: string, password: string, fullName: string) {
-  const sb = createClient()
-  return sb.auth.signUp({ email, password, options: { data: { full_name: fullName } } })
+  return sb().auth.signUp({ email, password, options: { data: { full_name: fullName } } })
 }
 
 export async function signOut() {
-  const sb = createClient()
-  return sb.auth.signOut()
+  return sb().auth.signOut()
+}
+
+export async function getCurrentUser() {
+  const { data } = await sb().auth.getUser()
+  return data.user
 }
