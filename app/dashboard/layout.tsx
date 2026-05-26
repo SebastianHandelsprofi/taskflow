@@ -1,6 +1,6 @@
 'use client'
-import { usePathname, useRouter } from 'next/navigation'
-import { signOut } from '@/lib/api'
+import { usePathname } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 const NAV = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
@@ -11,11 +11,10 @@ const NAV = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const router = useRouter()
 
   async function handleSignOut() {
-    await signOut()
-    router.push('/login')
+    await createClient().auth.signOut()
+    window.location.href = '/login'
   }
 
   return (

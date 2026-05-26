@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { signIn, signUp } from '@/lib/api'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -14,12 +14,13 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      const sb = createClient()
       if (mode === 'login') {
-        const { error } = await signIn(email, password)
+        const { error } = await sb.auth.signInWithPassword({ email, password })
         if (error) throw error
         window.location.href = '/dashboard'
       } else {
-        const { error } = await signUp(email, password, name)
+        const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name } } })
         if (error) throw error
         setError('Bestätige deine E-Mail, dann kannst du dich einloggen.')
       }
