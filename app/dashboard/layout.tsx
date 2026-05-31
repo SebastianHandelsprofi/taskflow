@@ -7,12 +7,12 @@ const NAV = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
   { href: '/dashboard/tasks', icon: '◈', label: 'Aufgaben' },
   { href: '/dashboard/team', icon: '◎', label: 'Team' },
-  { href: '/dashboard/teams', icon: '◫', label: 'Abteilungen' },
   { href: '/dashboard/gamification', icon: '◆', label: 'Rangliste' },
 ]
 
 const ADMIN_NAV = [
   { href: '/dashboard/admin', icon: '⚙', label: 'Team verwalten' },
+  { href: '/dashboard/teams', icon: '◫', label: 'Abteilungen' },
   { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
 ]
 
@@ -49,7 +49,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        {/* Haupt Navigation */}
         {NAV.map(n => {
           const active = pathname === n.href
           return (
@@ -59,7 +58,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )
         })}
 
-        {/* Admin Navigation */}
         {isAdmin && (
           <>
             <div style={{ margin: '12px 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
