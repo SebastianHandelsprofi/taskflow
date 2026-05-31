@@ -1,6 +1,7 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useEffect, useState } from 'react'
 
 const NAV = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
@@ -11,11 +12,25 @@ const NAV = [
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [profile, setProfile] = useState<any>(null)
+
+  useEffect(() => {
+    createClient().auth.getUser().then(async ({ data }: any) => {
+      if (data.user) {
+        const res = await fetch('/api/profiles')
+        const profiles = await res.json()
+        const me = profiles.find((p: any) => p.id === data.user.id)
+        setProfile(me)
+      }
+    })
+  }, [])
 
   async function handleSignOut() {
     await createClient().auth.signOut()
     window.location.href = '/login'
   }
+
+  const isAdmin = profile?.role === 'admin'
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -37,8 +52,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )
         })}
 
+        {isAdmin && (
+          <>
+            <div style={{ margin: '12px 20px', borderTop: '1px solid var(--border)' }} />
+            <a href="/dashboard/admin" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: pathname === '/dashboard/admin' ? '#6c63ff18' : 'transparent', borderLeft: pathname === '/dashboard/admin' ? '3px solid var(--accent)' : '3px solid transparent', color: pathname === '/dashboard/admin' ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: pathname === '/dashboard/admin' ? 600 : 400 }}>
+              <span>⚙</span>Team verwalten
+            </a>
+          </>
+        )}
+
         <div style={{ flex: 1 }} />
-        <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border)' }}>
+
+        {profile && (
+          <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{profile.full_name}</div>
+            <div style={{ fontSize: 10, color: 'var(--muted)' }}>{profile.role} · {profile.team || '—'}</div>
+          </div>
+        )}
+
+        <div style={{ padding: '0 20px' }}>
           <button onClick={handleSignOut} style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>← Abmelden</button>
         </div>
       </aside>
