@@ -7,9 +7,13 @@ const NAV = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
   { href: '/dashboard/tasks', icon: '◈', label: 'Aufgaben' },
   { href: '/dashboard/team', icon: '◎', label: 'Team' },
-  { href: '/dashboard/abteilungen', icon: '◫', label: 'Abteilungen' },
-  { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
+  { href: '/dashboard/teams', icon: '◫', label: 'Abteilungen' },
   { href: '/dashboard/gamification', icon: '◆', label: 'Rangliste' },
+]
+
+const ADMIN_NAV = [
+  { href: '/dashboard/admin', icon: '⚙', label: 'Team verwalten' },
+  { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -45,6 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
+        {/* Haupt Navigation */}
         {NAV.map(n => {
           const active = pathname === n.href
           return (
@@ -54,12 +59,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )
         })}
 
+        {/* Admin Navigation */}
         {isAdmin && (
           <>
-            <div style={{ margin: '12px 20px', borderTop: '1px solid var(--border)' }} />
-            <a href="/dashboard/admin" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: pathname === '/dashboard/admin' ? '#6c63ff18' : 'transparent', borderLeft: pathname === '/dashboard/admin' ? '3px solid var(--accent)' : '3px solid transparent', color: pathname === '/dashboard/admin' ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: pathname === '/dashboard/admin' ? 600 : 400 }}>
-              <span>⚙</span>Team verwalten
-            </a>
+            <div style={{ margin: '12px 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Admin</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+            {ADMIN_NAV.map(n => {
+              const active = pathname === n.href
+              return (
+                <a key={n.href} href={n.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: active ? '#6c63ff18' : 'transparent', borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent', color: active ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.2s' }}>
+                  <span>{n.icon}</span>{n.label}
+                </a>
+              )
+            })}
           </>
         )}
 
