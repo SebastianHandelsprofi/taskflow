@@ -7,7 +7,8 @@ const NAV = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
   { href: '/dashboard/tasks', icon: '◈', label: 'Aufgaben' },
   { href: '/dashboard/team', icon: '◎', label: 'Team' },
-  { href: '/dashboard/teams', icon: '◫', label: 'Abteilungen' },
+  { href: '/dashboard/abteilungen', icon: '◫', label: 'Abteilungen' },
+  { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
   { href: '/dashboard/gamification', icon: '◆', label: 'Rangliste' },
 ]
 
@@ -67,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {profile && (
           <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', marginBottom: 8 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{profile.full_name}</div>
-            <div style={{ fontSize: 10, color: 'var(--muted)' }}>{profile.role} · {profile.team || '—'}</div>
+            <div style={{ fontSize: 10, color: 'var(--muted)' }}>{profile.role} · {profile.abteilung || '—'}</div>
           </div>
         )}
 
