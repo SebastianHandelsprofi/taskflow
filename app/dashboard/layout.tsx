@@ -7,6 +7,7 @@ const NAV = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
   { href: '/dashboard/tasks', icon: '◈', label: 'Aufgaben' },
   { href: '/dashboard/team', icon: '◎', label: 'Team' },
+  { href: '/dashboard/teams', icon: '◫', label: 'Abteilungen' },
   { href: '/dashboard/gamification', icon: '◆', label: 'Rangliste' },
 ]
 
