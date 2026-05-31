@@ -19,13 +19,13 @@ export async function GET() {
 
   const { data: profiles } = await sb
     .from('profiles')
-    .select('id, full_name, role, team, level, points')
+    .select('id, full_name, role, abteilung, level, points')
     .eq('tenant_id', TENANT_ID)
 
   const result = (teams ?? []).map(t => ({
     ...t,
-    members: (profiles ?? []).filter(p => p.team === t.name),
-    leader: (profiles ?? []).find(p => p.team === t.name && p.role === 'bereichsleiter'),
+    members: (profiles ?? []).filter(p => p.abteilung === t.name),
+    leader: (profiles ?? []).find(p => p.abteilung === t.name && p.role === 'bereichsleiter'),
   }))
 
   return NextResponse.json(result)

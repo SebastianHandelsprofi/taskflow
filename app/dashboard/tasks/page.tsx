@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { fetchTasks, createTask, updateTask, deleteTask, fetchProfiles } from '@/lib/api'
+import { fetchTasks, updateTask, deleteTask, fetchProfiles } from '@/lib/api'
 import { createClient } from '@/lib/supabase/client'
 
 const TENANT_ID = '1aa1d675-232e-4375-b246-b41cb76f0beb'
@@ -33,14 +33,29 @@ function Modal({ title, form, setForm, profiles, onSave, onClose, saving, errMsg
           <div><label style={lbl}>Titel *</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Aufgabentitel..." /></div>
           <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 70, resize: 'vertical' }} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div><label style={lbl}>Kategorie</label><select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
-            <div><label style={lbl}>Priorität</label><select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
-            <div><label style={lbl}>Status</label><select style={inp} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></div>
+            <div>
+              <label style={lbl}>Kategorie</label>
+              <select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Priorität</label>
+              <select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Status</label>
+              <select style={inp} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                {STATUSES.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
             <div>
               <label style={lbl}>Verantwortlicher</label>
               <select style={inp} value={form.assignee_id || ''} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
                 <option value="">— Nicht zugewiesen —</option>
-                {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.team || p.role})</option>)}
+                {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.abteilung || p.role})</option>)}
               </select>
             </div>
             <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline || ''} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
@@ -61,7 +76,7 @@ export default function TasksPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [currentProfile, setCurrentProfile] = useState<any>(null)
   const [view, setView] = useState<'mine' | 'team' | 'all'>('mine')
-  const [filter, setFilter] = useState('Alle')
+  const [statusFilter, setStatusFilter] = useState('Alle')
   const [categoryFilter, setCategoryFilter] = useState('Alle')
   const [createModal, setCreateModal] = useState(false)
   const [editModal, setEditModal] = useState(false)
@@ -90,7 +105,6 @@ export default function TasksPage() {
     })
   }, [load])
 
-  // Ansicht je nach Rolle setzen
   useEffect(() => {
     if (!currentProfile) return
     if (currentProfile.role === 'mitarbeiter') setView('mine')
@@ -98,19 +112,17 @@ export default function TasksPage() {
     else setView('all')
   }, [currentProfile])
 
-  // Aufgaben filtern nach Ansicht
   const viewFiltered = tasks.filter((t: any) => {
     if (view === 'mine') return t.assignee_id === currentProfile?.id
     if (view === 'team') {
-      const teamMembers = profiles.filter((p: any) => p.team === currentProfile?.team).map((p: any) => p.id)
+      const teamMembers = profiles.filter((p: any) => p.abteilung === currentProfile?.abteilung).map((p: any) => p.id)
       return teamMembers.includes(t.assignee_id) || t.assignee_id === currentProfile?.id
     }
     return true
   })
 
-  // Status und Kategorie Filter
   const filtered = viewFiltered
-    .filter(t => filter === 'Alle' || t.status === filter)
+    .filter(t => statusFilter === 'Alle' || t.status === statusFilter)
     .filter(t => categoryFilter === 'Alle' || t.category === categoryFilter)
 
   const counts: Record<string, number> = {
@@ -126,19 +138,25 @@ export default function TasksPage() {
     if (!form.title) return
     setSaving(true)
     try {
-      await createTask({
-        title: form.title,
-        description: form.description || null,
-        category: form.category,
-        priority: form.priority,
-        status: 'Offen',
-        assignee_id: form.assignee_id || null,
-        deadline: form.deadline || null,
-        points_value: form.points_value,
-        tenant_id: TENANT_ID,
-        created_by: currentProfile?.id,
-        team: form.category,
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description || null,
+          category: form.category,
+          priority: form.priority,
+          status: 'Offen',
+          assignee_id: form.assignee_id || null,
+          deadline: form.deadline || null,
+          points_value: form.points_value,
+          tenant_id: TENANT_ID,
+          created_by: currentProfile?.id,
+          kategorie: form.category,
+        })
       })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
       setCreateModal(false)
       setForm(EMPTY)
       load()
@@ -160,7 +178,7 @@ export default function TasksPage() {
         assignee_id: editForm.assignee_id || null,
         deadline: editForm.deadline || null,
         points_value: editForm.points_value,
-        team: editForm.category,
+        kategorie: editForm.category,
       })
       setEditModal(false)
       setEditForm(null)
@@ -176,19 +194,18 @@ export default function TasksPage() {
   }
 
   const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
-  const teamColor = CC[currentProfile?.team] || 'var(--accent)'
+  const abteilungColor = CC[currentProfile?.abteilung] || 'var(--accent)'
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>Aufgaben</h1>
           {currentProfile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <Avatar name={currentProfile.full_name} color={teamColor} />
+              <Avatar name={currentProfile.full_name} color={abteilungColor} />
               <span style={{ color: 'var(--muted)', fontSize: 13 }}>
-                {currentProfile.full_name} · {currentProfile.team || currentProfile.role}
+                {currentProfile.full_name} · {currentProfile.abteilung || currentProfile.role}
               </span>
             </div>
           )}
@@ -198,45 +215,33 @@ export default function TasksPage() {
         )}
       </div>
 
-      {/* Ansicht-Tabs je nach Rolle */}
       {currentProfile?.role !== 'mitarbeiter' && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <button onClick={() => setView('mine')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'mine' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'mine' ? 'var(--accent)' : 'transparent', color: view === 'mine' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-            Meine Aufgaben
-          </button>
+          <button onClick={() => setView('mine')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'mine' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'mine' ? 'var(--accent)' : 'transparent', color: view === 'mine' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Meine Aufgaben</button>
           {currentProfile?.role === 'bereichsleiter' && (
-            <button onClick={() => setView('team')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-              Mein Team
-            </button>
+            <button onClick={() => setView('team')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Meine Abteilung</button>
           )}
           {currentProfile?.role === 'admin' && (
             <>
-              <button onClick={() => setView('team')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                Mein Team
-              </button>
-              <button onClick={() => setView('all')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'all' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'all' ? 'var(--accent)' : 'transparent', color: view === 'all' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                Alle Aufgaben
-              </button>
+              <button onClick={() => setView('team')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Meine Abteilung</button>
+              <button onClick={() => setView('all')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'all' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'all' ? 'var(--accent)' : 'transparent', color: view === 'all' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Alle Aufgaben</button>
             </>
           )}
         </div>
       )}
 
-      {/* Status Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         {Object.entries(counts).map(([s, c]) => (
-          <button key={s} onClick={() => setFilter(s)} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${filter === s ? 'var(--accent)' : 'var(--border)'}`, background: filter === s ? 'var(--accent)' : 'var(--card)', color: filter === s ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>{s} ({c})</button>
+          <button key={s} onClick={() => setStatusFilter(s)} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${statusFilter === s ? 'var(--accent)' : 'var(--border)'}`, background: statusFilter === s ? 'var(--accent)' : 'var(--card)', color: statusFilter === s ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>{s} ({c})</button>
         ))}
       </div>
 
-      {/* Kategorie Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {['Alle', ...CATEGORIES].map(cat => (
           <button key={cat} onClick={() => setCategoryFilter(cat)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${categoryFilter === cat ? (CC[cat] || 'var(--accent)') : 'var(--border)'}`, background: categoryFilter === cat ? `${CC[cat] || 'var(--accent)'}22` : 'transparent', color: categoryFilter === cat ? (CC[cat] || 'var(--accent)') : 'var(--muted)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>{cat}</button>
         ))}
       </div>
 
-      {/* Aufgaben Liste */}
       {loading ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Lade...</div> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.length === 0 && (
@@ -255,7 +260,6 @@ export default function TasksPage() {
                 onMouseEnter={e => (e.currentTarget.style.transform = 'translateX(3px)')}
                 onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
               >
-                {isMyTask && <div style={{ position: 'absolute', fontSize: 10, color: 'var(--accent)', fontWeight: 700 }}></div>}
                 <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => openEdit(task)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{task.title}</div>
@@ -266,7 +270,7 @@ export default function TasksPage() {
                     <Tag label={task.priority} color={pc} />
                     {assignee ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Avatar name={assignee.full_name} color={CC[assignee.team] || 'var(--accent)'} size={18} />
+                        <Avatar name={assignee.full_name} color={CC[assignee.abteilung] || 'var(--accent)'} size={18} />
                         <span style={{ fontSize: 11, color: 'var(--muted)' }}>{assignee.full_name}</span>
                       </div>
                     ) : <Tag label="Nicht zugewiesen" color="var(--muted)" />}

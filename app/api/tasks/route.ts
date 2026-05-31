@@ -9,7 +9,7 @@ const sb = createClient(
 export async function GET() {
   const { data, error } = await sb
     .from('tasks')
-    .select('*, assignee:profiles!assignee_id(id, full_name, team)')
+    .select('*, assignee:profiles!assignee_id(id, full_name, abteilung)')
     .order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
