@@ -1,20 +1,30 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
-const URL = 'https://xxbgmcalobabafdrxjcn.supabase.co'
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4YmdtY2Fsb2JhYmFmZHJ4amNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTA0ODIsImV4cCI6MjA5NTI2NjQ4Mn0.XrD62q_DtiTmInz6SqnHlQ9QPQtZNDaVPATBteoZ9xg'
-
-function sb() { return createSupabaseClient(URL, KEY) }
+const sb = () => createClient(
+  'https://xxbgmcalobabafdrxjcn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4YmdtY2Fsb2JhYmFmZHJ4amNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2OTA0ODIsImV4cCI6MjA5NTI2NjQ4Mn0.XrD62q_DtiTmInz6SqnHlQ9QPQtZNDaVPATBteoZ9xg'
+)
 
 export async function fetchTasks() {
-  const { data, error } = await sb().from('tasks').select('*, assignee:profiles!assignee_id(id, full_name, team)').order('created_at', { ascending: false })
-  if (error) throw error
-  return data ?? []
+  const res = await fetch('/api/tasks')
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
 
 export async function createTask(task: any) {
-  const { data, error } = await sb().from('tasks').insert(task).select().single()
-  if (error) throw error
-  return data
+  const res = await fetch('/api/tasks', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(task),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function fetchProfiles() {
+  const res = await fetch('/api/profiles')
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
 }
 
 export async function updateTask(id: string, updates: any) {
@@ -26,18 +36,6 @@ export async function updateTask(id: string, updates: any) {
 export async function deleteTask(id: string) {
   const { error } = await sb().from('tasks').delete().eq('id', id)
   if (error) throw error
-}
-
-export async function fetchProfiles() {
-  const { data, error } = await sb().from('profiles').select('*').order('points', { ascending: false })
-  if (error) throw error
-  return data ?? []
-}
-
-export async function fetchCurrentProfile(userId: string) {
-  const { data, error } = await sb().from('profiles').select('*').eq('id', userId).single()
-  if (error) return null
-  return data
 }
 
 export async function fetchLeaderboard() {
@@ -98,9 +96,4 @@ export async function signUp(email: string, password: string, fullName: string) 
 
 export async function signOut() {
   return sb().auth.signOut()
-}
-
-export async function getCurrentUser() {
-  const { data } = await sb().auth.getUser()
-  return data.user
 }
