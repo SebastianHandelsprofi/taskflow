@@ -361,7 +361,7 @@ export default function TasksPage() {
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value}</div>
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>Pkt</div>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--muted)' }}>💬 Klicken</div>
+                <div style={{ fontSize: 11, color: (task.comments || []).length > 0 ? "var(--accent)" : "var(--muted)", fontWeight: (task.comments || []).length > 0 ? 600 : 400 }}>💬 {(task.comments || []).length > 0 ? (task.comments || []).length : ""}</div>
               </div>
             )
           })}
