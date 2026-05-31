@@ -23,48 +23,157 @@ function Avatar({ name, color = 'var(--accent)', size = 28 }: { name: string; co
   return <div style={{ width: size, height: size, borderRadius: size / 2, background: `${color}33`, border: `1px solid ${color}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700, color, flexShrink: 0 }}>{initials}</div>
 }
 
-function Modal({ title, form, setForm, profiles, onSave, onClose, saving, errMsg }: any) {
+function TaskModal({ task, profiles, currentProfile, onClose, onSave, onDelete }: any) {
+  const [form, setForm] = useState({ ...task, assignee_id: task.assignee_id || '', deadline: task.deadline || '' })
+  const [comments, setComments] = useState<any[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [sendingComment, setSendingComment] = useState(false)
+  const [tab, setTab] = useState<'details' | 'comments'>('details')
+
+  useEffect(() => { loadComments() }, [task.id])
+
+  async function loadComments() {
+    const res = await fetch(`/api/comments?task_id=${task.id}`)
+    if (res.ok) setComments(await res.json())
+  }
+
+  async function handleSendComment() {
+    if (!newComment.trim()) return
+    setSendingComment(true)
+    await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task_id: task.id, user_id: currentProfile?.id, content: newComment.trim() })
+    })
+    setNewComment('')
+    loadComments()
+    setSendingComment(false)
+  }
+
+  async function handleDeleteComment(id: string) {
+    await fetch('/api/comments', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    })
+    loadComments()
+  }
+
+  const cc = CC[form.category] || 'var(--accent)'
+  const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 520, maxWidth: '90vw' }}>
-        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>{title}</div>
-        {errMsg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 16, background: '#ff4d6d22', color: 'var(--red)', fontSize: 13 }}>{errMsg}</div>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div><label style={lbl}>Titel *</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Aufgabentitel..." /></div>
-          <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 70, resize: 'vertical' }} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={lbl}>Kategorie</label>
-              <select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={lbl}>Priorität</label>
-              <select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
-                {PRIORITIES.map(p => <option key={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={lbl}>Status</label>
-              <select style={inp} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-                {STATUSES.map(s => <option key={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={lbl}>Verantwortlicher</label>
-              <select style={inp} value={form.assignee_id || ''} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
-                <option value="">— Nicht zugewiesen —</option>
-                {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.abteilung || p.role})</option>)}
-              </select>
-            </div>
-            <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline || ''} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
-            <div><label style={lbl}>Punkte</label><input type="number" style={inp} value={form.points_value} onChange={e => setForm({ ...form, points_value: Number(e.target.value) })} /></div>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, width: 580, maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', borderLeft: `4px solid ${cc}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{task.title}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{task.category} · {task.priority}</div>
           </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
         </div>
-        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
-          <button onClick={onSave} disabled={!form.title || saving} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: form.title ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: form.title ? 'pointer' : 'not-allowed', fontWeight: 600 }}>{saving ? 'Speichere...' : 'Speichern'}</button>
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)' }}>
+          {[{ id: 'details', label: 'Details' }, { id: 'comments', label: `Kommentare (${comments.length})` }].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id as any)} style={{ padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? 'var(--accent)' : 'var(--muted)', borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          {tab === 'details' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={lbl}>Titel</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
+              <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 80, resize: 'vertical' }} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><label style={lbl}>Kategorie</label><select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
+                <div><label style={lbl}>Priorität</label><select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label style={lbl}>Status</label><select style={inp} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></div>
+                <div>
+                  <label style={lbl}>Verantwortlicher</label>
+                  <select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
+                    <option value="">— Nicht zugewiesen —</option>
+                    {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.abteilung || p.role})</option>)}
+                  </select>
+                </div>
+                <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
+                <div><label style={lbl}>Punkte</label><input type="number" style={inp} value={form.points_value} onChange={e => setForm({ ...form, points_value: Number(e.target.value) })} /></div>
+              </div>
+            </div>
+          )}
+
+          {tab === 'comments' && (
+            <div>
+              {comments.length === 0 && (
+                <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '20px 0', fontSize: 13 }}>Noch keine Kommentare — schreib den ersten!</div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                {comments.map((c: any) => {
+                  const isMe = c.user_id === currentProfile?.id
+                  const abtColor = CC[c.author?.abteilung] || 'var(--accent)'
+                  return (
+                    <div key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      {c.author && <Avatar name={c.author.full_name} color={abtColor} size={32} />}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600 }}>{c.author?.full_name || 'Unbekannt'}</span>
+                            {isMe && <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: 'var(--accent)22', color: 'var(--accent)', fontWeight: 700 }}>ICH</span>}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(c.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                            {isMe && <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 12, opacity: 0.5 }}>✕</button>}
+                          </div>
+                        </div>
+                        <div style={{ padding: '10px 14px', borderRadius: 10, background: isMe ? 'var(--accent)18' : 'var(--surface)', border: `1px solid ${isMe ? 'var(--accent)33' : 'var(--border)'}`, fontSize: 13, lineHeight: 1.5 }}>
+                          {c.content}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Neuer Kommentar */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                {currentProfile && <Avatar name={currentProfile.full_name} color={CC[currentProfile.abteilung] || 'var(--accent)'} size={32} />}
+                <div style={{ flex: 1 }}>
+                  <textarea
+                    style={{ ...inp, height: 70, resize: 'none', marginBottom: 0 }}
+                    placeholder="Kommentar schreiben..."
+                    value={newComment}
+                    onChange={e => setNewComment(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment() } }}
+                  />
+                </div>
+                <button onClick={handleSendComment} disabled={!newComment.trim() || sendingComment} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: newComment.trim() ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: newComment.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
+                  {sendingComment ? '...' : '↑ Senden'}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>Enter zum Senden · Shift+Enter für neue Zeile</div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+          {isAdminOrLeiter ? (
+            <button onClick={() => { onDelete(task.id); onClose() }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>🗑 Löschen</button>
+          ) : <div />}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Schließen</button>
+            {isAdminOrLeiter && (
+              <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                {saving ? 'Speichere...' : 'Speichern'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -79,18 +188,15 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState('Alle')
   const [categoryFilter, setCategoryFilter] = useState('Alle')
   const [createModal, setCreateModal] = useState(false)
-  const [editModal, setEditModal] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<any>(null)
   const [form, setForm] = useState<any>(EMPTY)
-  const [editForm, setEditForm] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errMsg, setErrMsg] = useState('')
 
   const load = useCallback(async () => {
     const [t, p] = await Promise.all([fetchTasks(), fetchProfiles()])
-    setTasks(t)
-    setProfiles(p)
-    setLoading(false)
+    setTasks(t); setProfiles(p); setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -99,8 +205,7 @@ export default function TasksPage() {
       if (data.user) {
         const res = await fetch('/api/profiles')
         const profiles = await res.json()
-        const me = profiles.find((p: any) => p.id === data.user.id)
-        setCurrentProfile(me)
+        setCurrentProfile(profiles.find((p: any) => p.id === data.user.id))
       }
     })
   }, [load])
@@ -142,55 +247,29 @@ export default function TasksPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: form.title,
-          description: form.description || null,
-          category: form.category,
-          priority: form.priority,
-          status: 'Offen',
-          assignee_id: form.assignee_id || null,
-          deadline: form.deadline || null,
-          points_value: form.points_value,
-          tenant_id: TENANT_ID,
-          created_by: currentProfile?.id,
-          kategorie: form.category,
+          title: form.title, description: form.description || null,
+          category: form.category, priority: form.priority, status: 'Offen',
+          assignee_id: form.assignee_id || null, deadline: form.deadline || null,
+          points_value: form.points_value, tenant_id: TENANT_ID,
+          created_by: currentProfile?.id, kategorie: form.category,
         })
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setCreateModal(false)
-      setForm(EMPTY)
-      load()
+      setCreateModal(false); setForm(EMPTY); load()
     } catch (e: any) { setErrMsg('Fehler: ' + e.message) }
     setSaving(false)
   }
 
-  async function handleEdit() {
-    setErrMsg('')
-    if (!editForm?.title) return
-    setSaving(true)
-    try {
-      await updateTask(editForm.id, {
-        title: editForm.title,
-        description: editForm.description || null,
-        category: editForm.category,
-        priority: editForm.priority,
-        status: editForm.status,
-        assignee_id: editForm.assignee_id || null,
-        deadline: editForm.deadline || null,
-        points_value: editForm.points_value,
-        kategorie: editForm.category,
-      })
-      setEditModal(false)
-      setEditForm(null)
-      load()
-    } catch (e: any) { setErrMsg('Fehler: ' + e.message) }
-    setSaving(false)
-  }
-
-  function openEdit(task: any) {
-    setEditForm({ ...task, assignee_id: task.assignee_id || '', deadline: task.deadline || '' })
-    setErrMsg('')
-    setEditModal(true)
+  async function handleSaveTask(updatedForm: any) {
+    await updateTask(updatedForm.id, {
+      title: updatedForm.title, description: updatedForm.description || null,
+      category: updatedForm.category, priority: updatedForm.priority,
+      status: updatedForm.status, assignee_id: updatedForm.assignee_id || null,
+      deadline: updatedForm.deadline || null, points_value: updatedForm.points_value,
+      kategorie: updatedForm.category,
+    })
+    setSelectedTask(null); load()
   }
 
   const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
@@ -204,9 +283,7 @@ export default function TasksPage() {
           {currentProfile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
               <Avatar name={currentProfile.full_name} color={abteilungColor} />
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>
-                {currentProfile.full_name} · {currentProfile.abteilung || currentProfile.role}
-              </span>
+              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{currentProfile.full_name} · {currentProfile.abteilung || currentProfile.role}</span>
             </div>
           )}
         </div>
@@ -256,11 +333,11 @@ export default function TasksPage() {
             const assignee = profiles.find((p: any) => p.id === task.assignee_id)
             const isMyTask = task.assignee_id === currentProfile?.id
             return (
-              <div key={task.id} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `3px solid ${cc}`, borderRadius: 12, padding: 18, display: 'flex', alignItems: 'center', gap: 16, transition: 'transform 0.15s' }}
+              <div key={task.id} onClick={() => setSelectedTask(task)} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `3px solid ${cc}`, borderRadius: 12, padding: 18, display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'transform 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'translateX(3px)')}
                 onMouseLeave={e => (e.currentTarget.style.transform = 'none')}
               >
-                <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => openEdit(task)}>
+                <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{task.title}</div>
                     {isMyTask && <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--accent)22', color: 'var(--accent)', fontWeight: 700 }}>MEINE</span>}
@@ -284,20 +361,48 @@ export default function TasksPage() {
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value}</div>
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>Pkt</div>
                 </div>
-                {isAdminOrLeiter && (
-                  <>
-                    <button onClick={e => { e.stopPropagation(); openEdit(task) }} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', cursor: 'pointer', fontSize: 12, padding: '4px 10px', borderRadius: 6 }}>✏️</button>
-                    <button onClick={e => { e.stopPropagation(); deleteTask(task.id); load() }} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 16, opacity: 0.5 }}>✕</button>
-                  </>
-                )}
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>💬 Klicken</div>
               </div>
             )
           })}
         </div>
       )}
 
-      {createModal && <Modal title="Neue Aufgabe" form={form} setForm={setForm} profiles={profiles} onSave={handleCreate} onClose={() => setCreateModal(false)} saving={saving} errMsg={errMsg} />}
-      {editModal && editForm && <Modal title="Aufgabe bearbeiten" form={editForm} setForm={setEditForm} profiles={profiles} onSave={handleEdit} onClose={() => { setEditModal(false); setEditForm(null) }} saving={saving} errMsg={errMsg} />}
+      {/* Neue Aufgabe Modal */}
+      {createModal && (
+        <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && setCreateModal(false)}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 520, maxWidth: '90vw' }}>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Neue Aufgabe</div>
+            {errMsg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 16, background: '#ff4d6d22', color: 'var(--red)', fontSize: 13 }}>{errMsg}</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div><label style={lbl}>Titel *</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Aufgabentitel..." /></div>
+              <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 70, resize: 'vertical' }} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><label style={lbl}>Kategorie</label><select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
+                <div><label style={lbl}>Priorität</label><select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label style={lbl}>Verantwortlicher</label><select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}><option value="">— Nicht zugewiesen —</option>{profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.abteilung || p.role})</option>)}</select></div>
+                <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button onClick={() => setCreateModal(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
+              <button onClick={handleCreate} disabled={!form.title || saving} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: form.title ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: form.title ? 'pointer' : 'not-allowed', fontWeight: 600 }}>{saving ? 'Speichere...' : 'Erstellen'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Detail + Kommentare Modal */}
+      {selectedTask && (
+        <TaskModal
+          task={selectedTask}
+          profiles={profiles}
+          currentProfile={currentProfile}
+          onClose={() => setSelectedTask(null)}
+          onSave={handleSaveTask}
+          onDelete={(id: string) => { deleteTask(id); load() }}
+        />
+      )}
     </div>
   )
 }
