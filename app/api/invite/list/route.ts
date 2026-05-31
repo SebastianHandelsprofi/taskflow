@@ -11,11 +11,13 @@ export async function GET() {
     .from('invitations')
     .select('*')
     .order('created_at', { ascending: false })
-  
-  if (error) {
-    console.error('Invitations error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-  
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])
+}
+
+export async function DELETE(request: Request) {
+  const { id } = await request.json()
+  const { error } = await sb.from('invitations').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
 }
