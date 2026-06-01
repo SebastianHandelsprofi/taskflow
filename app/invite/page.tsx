@@ -40,6 +40,7 @@ export default function InvitePage() {
     try {
       const fullName = `${vorname.trim()} ${nachname.trim()}`
       const sb = createClient()
+
       const { data: authData, error: authError } = await sb.auth.signUp({
         email: invitation.email,
         password,
@@ -49,20 +50,18 @@ export default function InvitePage() {
 
       const userId = authData.user?.id
       if (userId) {
-        // Profil mit korrekter abteilung anlegen
-        const profileRes = await fetch('/api/profiles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Profil updaten statt neu anlegen (Trigger hat es schon angelegt)
+        const { error: updateError } = await sb
+          .from('profiles')
+          .upsert({
             id: userId,
             tenant_id: invitation.tenant_id,
             full_name: fullName,
             role: invitation.role,
-            abteilung: invitation.team, // team aus Einladung = abteilung im Profil
+            abteilung: invitation.team,
           })
-        })
-        const profileData = await profileRes.json()
-        if (profileData.error) throw new Error(profileData.error)
+
+        if (updateError) throw updateError
 
         // Einladung als akzeptiert markieren
         await fetch('/api/invite', {
