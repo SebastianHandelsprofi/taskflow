@@ -45,7 +45,7 @@ export async function GET() {
 // E-Mail Bestätigung manuell setzen
 export async function PATCH(request: Request) {
   const { user_id } = await request.json()
-  const { error } = await adminSb.auth.admin.updateUser(user_id, {
+  const { error } = await adminSb.auth.admin.updateUserById(user_id, {
     email_confirm: true,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
