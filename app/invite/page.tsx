@@ -31,8 +31,6 @@ export default function InvitePage() {
 
   async function handleRegister() {
     setFieldError('')
-
-    // Validierung
     if (!vorname.trim()) { setFieldError('Bitte Vornamen eingeben'); return }
     if (!nachname.trim()) { setFieldError('Bitte Nachnamen eingeben'); return }
     if (password.length < 6) { setFieldError('Passwort muss mindestens 6 Zeichen haben'); return }
@@ -45,13 +43,14 @@ export default function InvitePage() {
       const { data: authData, error: authError } = await sb.auth.signUp({
         email: invitation.email,
         password,
-        options: { data: { full_name: fullName, tenant_id: invitation.tenant_id, role: invitation.role } }
+        options: { data: { full_name: fullName } }
       })
       if (authError) throw authError
 
       const userId = authData.user?.id
       if (userId) {
-        await fetch('/api/profiles', {
+        // Profil mit korrekter abteilung anlegen
+        const profileRes = await fetch('/api/profiles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -59,9 +58,13 @@ export default function InvitePage() {
             tenant_id: invitation.tenant_id,
             full_name: fullName,
             role: invitation.role,
-            abteilung: invitation.team,
+            abteilung: invitation.team, // team aus Einladung = abteilung im Profil
           })
         })
+        const profileData = await profileRes.json()
+        if (profileData.error) throw new Error(profileData.error)
+
+        // Einladung als akzeptiert markieren
         await fetch('/api/invite', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -104,8 +107,6 @@ export default function InvitePage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0f', backgroundImage: 'radial-gradient(ellipse at 60% 0%, #6c63ff18 0%, transparent 60%)' }}>
       <div style={{ width: 440, background: '#1a1a26', border: '1px solid #2a2a3d', borderRadius: 16, padding: 36 }}>
-        
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
           <div style={{ width: 42, height: 42, borderRadius: 12, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 900, color: '#fff' }}>TF</div>
           <div>
@@ -114,7 +115,6 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* Einladungs-Info */}
         <div style={{ background: '#6c63ff18', border: '1px solid #6c63ff44', borderRadius: 10, padding: '12px 16px', marginBottom: 24 }}>
           <div style={{ fontSize: 12, color: '#6b6b8a', marginBottom: 4 }}>Du wurdest eingeladen als</div>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#e8e8f0', marginBottom: 6 }}>{invitation?.email}</div>
@@ -124,14 +124,12 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* Fehlermeldung */}
         {fieldError && (
           <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 16, background: '#ff4d6d22', border: '1px solid #ff4d6d44', color: '#ff4d6d', fontSize: 13 }}>
             ⚠️ {fieldError}
           </div>
         )}
 
-        {/* Name */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 4 }}>
           <div>
             <label style={lbl}>Vorname *</label>
@@ -143,7 +141,6 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* Passwort */}
         <div style={{ marginTop: 4 }}>
           <label style={lbl}>Passwort * (min. 6 Zeichen)</label>
           <input style={inp} type="password" value={password} onChange={e => setPass(e.target.value)} placeholder="••••••••" />
@@ -169,7 +166,7 @@ export default function InvitePage() {
         <button
           onClick={handleRegister}
           disabled={!isValid || saving}
-          style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', cursor: isValid ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14, background: isValid ? '#6c63ff' : '#2a2a3d', color: '#fff', marginTop: 8, transition: 'background 0.2s' }}
+          style={{ width: '100%', padding: '12px', borderRadius: 8, border: 'none', cursor: isValid ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14, background: isValid ? '#6c63ff' : '#2a2a3d', color: '#fff', marginTop: 8 }}
         >
           {saving ? 'Erstelle Account...' : '🚀 Account erstellen & loslegen'}
         </button>
