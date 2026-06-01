@@ -1,14 +1,18 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login')
-  const token = request.cookies.get('sb-xxbgmcalobabafdrxjcn-auth-token')
+  const pathname = request.nextUrl.pathname
 
-  if (!token && !isAuthPage) {
+  // Diese Seiten sind ohne Login zugänglich
+  const publicPaths = ['/login', '/invite']
+  const isPublic = publicPaths.some(path => pathname.startsWith(path))
+
+  if (isPublic) return NextResponse.next()
+
+  // Alle anderen Seiten brauchen einen Login-Cookie
+  const token = request.cookies.get('sb-xxbgmcalobabafdrxjcn-auth-token')
+  if (!token) {
     return NextResponse.redirect(new URL('/login', request.url))
-  }
-  if (token && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
   return NextResponse.next()
