@@ -20,14 +20,16 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [invitations, setInvitations] = useState<any[]>([])
   const [profiles, setProfiles] = useState<any[]>([])
+  const [authUsers, setAuthUsers] = useState<any[]>([])
   const [userId, setUserId] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'invite' | 'team' | 'pending'>('team')
+  const [activeTab, setActiveTab] = useState<'team' | 'invite' | 'pending' | 'sync'>('team')
   const [deleting, setDeleting] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState<any>(null)
   const [editAbteilung, setEditAbteilung] = useState('')
   const [editRole, setEditRole] = useState('')
   const [saving, setSaving] = useState(false)
+  const [confirming, setConfirming] = useState<string | null>(null)
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }: any) => setUserId(data.user?.id ?? null))
@@ -35,9 +37,14 @@ export default function AdminPage() {
   }, [])
 
   async function loadData() {
-    const [invRes, profRes] = await Promise.all([fetch('/api/invite/list'), fetch('/api/profiles')])
+    const [invRes, profRes, usersRes] = await Promise.all([
+      fetch('/api/invite/list'),
+      fetch('/api/profiles'),
+      fetch('/api/users'),
+    ])
     if (invRes.ok) setInvitations(await invRes.json())
     if (profRes.ok) setProfiles(await profRes.json())
+    if (usersRes.ok) setAuthUsers(await usersRes.json())
   }
 
   async function handleInvite() {
@@ -60,7 +67,7 @@ export default function AdminPage() {
     setSending(false)
   }
 
-  async function handleDelete(id: string) {
+  async function handleDeleteInvite(id: string) {
     if (!confirm('Einladung löschen?')) return
     setDeleting(id)
     await fetch('/api/invite/list', {
@@ -70,6 +77,31 @@ export default function AdminPage() {
     })
     loadData()
     setDeleting(null)
+  }
+
+  async function handleDeleteUser(userId: string, name: string) {
+    if (!confirm(`User "${name}" komplett löschen? Dies entfernt den Login-Account und das Profil.`)) return
+    setDeleting(userId)
+    const res = await fetch('/api/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    })
+    const data = await res.json()
+    if (data.error) alert('Fehler: ' + data.error)
+    loadData()
+    setDeleting(null)
+  }
+
+  async function handleConfirmEmail(userId: string) {
+    setConfirming(userId)
+    await fetch('/api/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId })
+    })
+    loadData()
+    setConfirming(null)
   }
 
   async function handleSaveProfile() {
@@ -94,6 +126,10 @@ export default function AdminPage() {
   const pending = invitations.filter(i => !i.accepted)
   const accepted = invitations.filter(i => i.accepted)
 
+  // Sync-Status: Auth Users ohne Profil oder Profil ohne Auth
+  const usersWithoutProfile = authUsers.filter(u => !u.profile)
+  const unconfirmedUsers = authUsers.filter(u => !u.confirmed)
+
   return (
     <div>
       <div style={{ marginBottom: 24 }}>
@@ -101,11 +137,12 @@ export default function AdminPage() {
         <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>Mitarbeiter einladen und verwalten</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
         {[
           { id: 'team', label: `Team (${profiles.length})` },
           { id: 'invite', label: '+ Einladen' },
           { id: 'pending', label: `Ausstehend (${pending.length})` },
+          { id: 'sync', label: `🔄 Sync${usersWithoutProfile.length > 0 || unconfirmedUsers.length > 0 ? ` ⚠️` : ''}` },
         ].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as any)} style={{ padding: '8px 18px', borderRadius: 20, border: `1px solid ${activeTab === t.id ? 'var(--accent)' : 'var(--border)'}`, background: activeTab === t.id ? 'var(--accent)' : 'transparent', color: activeTab === t.id ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             {t.label}
@@ -138,20 +175,14 @@ export default function AdminPage() {
                       <div style={{ fontSize: 13, fontWeight: 600 }}>{p.full_name}</div>
                     </div>
                   </td>
+                  <td style={{ padding: '14px 16px' }}><span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${ROLE_COLORS[p.role] || 'var(--muted)'}22`, color: ROLE_COLORS[p.role] || 'var(--muted)' }}>{p.role}</span></td>
                   <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${ROLE_COLORS[p.role] || 'var(--muted)'}22`, color: ROLE_COLORS[p.role] || 'var(--muted)' }}>{p.role}</span>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    {p.abteilung
-                      ? <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${TEAM_COLORS[p.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[p.abteilung] || '#6c63ff' }}>{p.abteilung}</span>
-                      : <span style={{ color: 'var(--red)', fontSize: 11 }}>⚠ Keine Abteilung</span>
-                    }
+                    {p.abteilung ? <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${TEAM_COLORS[p.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[p.abteilung] || '#6c63ff' }}>{p.abteilung}</span>
+                      : <span style={{ color: 'var(--red)', fontSize: 11 }}>⚠ Keine Abteilung</span>}
                   </td>
                   <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{p.points}</td>
                   <td style={{ padding: '14px 16px', fontSize: 13, color: 'var(--muted)' }}>Lv.{p.level}</td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#00d4aa22', color: '#00d4aa' }}>Aktiv</span>
-                  </td>
+                  <td style={{ padding: '14px 16px' }}><span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#00d4aa22', color: '#00d4aa' }}>Aktiv</span></td>
                   <td style={{ padding: '14px 16px' }}>
                     <button onClick={() => { setEditingProfile(p); setEditAbteilung(p.abteilung || ''); setEditRole(p.role) }} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 11 }}>
                       ✏️ Bearbeiten
@@ -234,7 +265,7 @@ export default function AdminPage() {
                         <button onClick={() => copyLink(`${BASE_URL}/invite?token=${inv.token}`, inv.id)} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 11 }}>
                           {copied === inv.id ? '✅' : '📋'}
                         </button>
-                        <button onClick={() => handleDelete(inv.id)} disabled={deleting === inv.id} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 11 }}>
+                        <button onClick={() => handleDeleteInvite(inv.id)} disabled={deleting === inv.id} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 11 }}>
                           {deleting === inv.id ? '...' : '🗑'}
                         </button>
                       </div>
@@ -244,6 +275,75 @@ export default function AdminPage() {
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      {/* Tab: Sync */}
+      {activeTab === 'sync' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', background: 'var(--surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>🔄 Alle Auth-User</div>
+                <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Supabase Auth synchronisiert mit App-Profilen</div>
+              </div>
+              <button onClick={loadData} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>↻ Aktualisieren</button>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+                  {['E-Mail', 'Name', 'Abteilung', 'Bestätigt', 'Letzter Login', 'Status', 'Aktionen'].map(h => (
+                    <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {authUsers.map((u: any, i: number) => (
+                  <tr key={u.id} style={{ borderBottom: i < authUsers.length - 1 ? '1px solid var(--border)' : 'none', background: !u.profile ? '#ff4d6d08' : 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = !u.profile ? '#ff4d6d08' : 'transparent')}
+                  >
+                    <td style={{ padding: '14px 16px', fontSize: 13 }}>{u.email}</td>
+                    <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600 }}>
+                      {u.profile?.full_name || <span style={{ color: 'var(--red)', fontSize: 11 }}>⚠ Kein Profil</span>}
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      {u.profile?.abteilung
+                        ? <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${TEAM_COLORS[u.profile.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[u.profile.abteilung] || '#6c63ff' }}>{u.profile.abteilung}</span>
+                        : <span style={{ color: 'var(--muted)', fontSize: 11 }}>—</span>
+                      }
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      {u.confirmed
+                        ? <span style={{ color: 'var(--green)', fontSize: 12 }}>✅</span>
+                        : <button onClick={() => handleConfirmEmail(u.id)} disabled={confirming === u.id} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #ffd16644', background: '#ffd16622', color: 'var(--yellow)', cursor: 'pointer', fontSize: 11 }}>
+                            {confirming === u.id ? '...' : '✉️ Bestätigen'}
+                          </button>
+                      }
+                    </td>
+                    <td style={{ padding: '14px 16px', fontSize: 11, color: 'var(--muted)' }}>
+                      {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString('de-DE') : '—'}
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      {u.profile
+                        ? <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#00d4aa22', color: '#00d4aa' }}>Aktiv</span>
+                        : <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#ff4d6d22', color: 'var(--red)' }}>Kein Profil</span>
+                      }
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      <button
+                        onClick={() => handleDeleteUser(u.id, u.profile?.full_name || u.email)}
+                        disabled={deleting === u.id}
+                        style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 11 }}
+                      >
+                        {deleting === u.id ? '...' : '🗑 Löschen'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
