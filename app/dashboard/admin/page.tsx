@@ -287,7 +287,7 @@ export default function AdminPage() {
                 <div style={{ fontSize: 14, fontWeight: 600 }}>🔄 Alle Auth-User</div>
                 <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Supabase Auth synchronisiert mit App-Profilen</div>
               </div>
-              <button onClick={loadData} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>↻ Aktualisieren</button>
+              <button onClick={() => loadData()} style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>↻ Aktualisieren</button>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
