@@ -214,7 +214,7 @@ export default function DashboardPage() {
               {isAdmin ? '🏢 Gesamt-Übersicht' : `👥 ${profile?.abteilung || 'Mein Team'}`}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {isAdmin ? [
+              {(isAdmin ? [
                 { label: 'Überfällig', value: alleUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
                 { label: 'Offen', value: alleOffen, color: 'var(--muted)', bg: 'var(--surface)' },
                 { label: 'In Bearbeitung', value: alleAktiv, color: 'var(--yellow)', bg: '#ffd16622' },
@@ -224,7 +224,7 @@ export default function DashboardPage() {
                 { label: 'Erledigt', value: teamErledigt, color: 'var(--green)', bg: '#00d4aa22' },
                 { label: 'Team-Mitglieder', value: teamMembers.length, color: abteilungColor, bg: `${abteilungColor}22` },
                 { label: 'Aufgaben gesamt', value: teamTasks.length, color: 'var(--muted)', bg: 'var(--surface)' },
-              ].map((s, i) => (
+              ] : []).map((s, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ flex: 1, fontSize: 13, color: s.value > 0 ? 'var(--text)' : 'var(--muted)' }}>{s.label}</div>
                   <div style={{ padding: '3px 12px', borderRadius: 20, background: s.bg, color: s.color, fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>{s.value}</div>
