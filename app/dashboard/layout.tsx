@@ -16,6 +16,13 @@ const ADMIN_NAV = [
   { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
 ]
 
+const STATUS_ORDER: Record<string, number> = {
+  'Ueberfaellig': 0,
+  'Offen': 1,
+  'In Bearbeitung': 2,
+  'Erledigt': 3,
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [profile, setProfile] = useState<any>(null)
@@ -47,12 +54,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const isAdmin = profile?.role === 'admin'
 
-  // Mobile Layout
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-        
-        {/* Mobile Header */}
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff' }}>TF</div>
@@ -61,8 +65,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {profile && (
               <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}>
-                <div style={{ fontWeight: 600, color: 'var(--text)' }}>{profile.full_name.split(' ')[0]}</div>
-                <div>{profile.role}</div>
+                <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 12 }}>{profile.full_name}</div>
+                <div>{profile.role} · {profile.abteilung || '—'}</div>
               </div>
             )}
             {isAdmin && (
@@ -73,7 +77,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* Admin Dropdown Menu */}
         {menuOpen && isAdmin && (
           <div style={{ position: 'absolute', top: 60, right: 8, zIndex: 100, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 8, minWidth: 200, boxShadow: '0 8px 32px #00000044' }}>
             {ADMIN_NAV.map(n => (
@@ -88,12 +91,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         )}
 
-        {/* Content */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '16px', paddingBottom: 80 }}>
           {children}
         </main>
 
-        {/* Bottom Navigation */}
         <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', zIndex: 50, paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {NAV.map(n => {
             const active = pathname === n.href
@@ -109,7 +110,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // Desktop Layout
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <aside style={{ width: 220, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
