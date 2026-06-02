@@ -17,13 +17,30 @@ const EMPTY = { title: '', description: '', category: '', priority: 'Mittel', st
 const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', outline: 'none' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, letterSpacing: '0.08em', textTransform: 'uppercase' }
 
+function formatDate(dateStr: string) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`
+}
+
 function Tag({ label, color }: { label: string; color: string }) {
-  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${color}22`, color, border: `1px solid ${color}44` }}>{label}</span>
+  return <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${color}22`, color, border: `1px solid ${color}44`, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
 function Avatar({ name, color = 'var(--accent)', size = 28 }: { name: string; color?: string; size?: number }) {
   const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
   return <div style={{ width: size, height: size, borderRadius: size / 2, background: `${color}33`, border: `1px solid ${color}66`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 700, color, flexShrink: 0 }}>{initials}</div>
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return isMobile
 }
 
 function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave, onDelete }: any) {
@@ -33,6 +50,7 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
   const [saving, setSaving] = useState(false)
   const [sendingComment, setSendingComment] = useState(false)
   const [tab, setTab] = useState<'details' | 'comments'>('details')
+  const isMobile = useIsMobile()
 
   useEffect(() => { loadComments() }, [task.id])
 
@@ -68,25 +86,29 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
   const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, width: 580, maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', borderLeft: `4px solid ${cc}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>{task.title}</div>
+    <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: isMobile ? '20px 20px 0 0' : 16, width: isMobile ? '100%' : 580, maxWidth: '100%', maxHeight: isMobile ? '92vh' : '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        
+        {/* Handle bar on mobile */}
+        {isMobile && <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border)', margin: '12px auto 0' }} />}
+
+        <div style={{ padding: isMobile ? '16px 20px 12px' : '20px 24px', borderBottom: '1px solid var(--border)', borderLeft: `4px solid ${cc}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ flex: 1, marginRight: 12 }}>
+            <div style={{ fontSize: isMobile ? 17 : 16, fontWeight: 700 }}>{task.title}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{task.category} · {task.priority}</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 20 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 22, padding: 4 }}>✕</button>
         </div>
 
         <div style={{ display: 'flex', borderBottom: '1px solid var(--border)' }}>
           {[{ id: 'details', label: 'Details' }, { id: 'comments', label: `Kommentare (${comments.length})` }].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id as any)} style={{ padding: '12px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? 'var(--accent)' : 'var(--muted)', borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent' }}>
+            <button key={t.id} onClick={() => setTab(t.id as any)} style={{ flex: 1, padding: isMobile ? '14px' : '12px 20px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, fontWeight: tab === t.id ? 600 : 400, color: tab === t.id ? 'var(--accent)' : 'var(--muted)', borderBottom: tab === t.id ? '2px solid var(--accent)' : '2px solid transparent' }}>
               {t.label}
             </button>
           ))}
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? 16 : 24 }}>
           {tab === 'details' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div><label style={lbl}>Titel</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
@@ -105,7 +127,7 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
                   <label style={lbl}>Verantwortlicher</label>
                   <select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
                     <option value="">— Nicht zugewiesen —</option>
-                    {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.abteilung || p.role})</option>)}
+                    {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
                   </select>
                 </div>
                 <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
@@ -131,7 +153,7 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
                           </div>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <span style={{ fontSize: 11, color: 'var(--muted)' }}>{new Date(c.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                            {isMe && <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 12, opacity: 0.5 }}>✕</button>}
+                            {isMe && <button onClick={() => handleDeleteComment(c.id)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 14, padding: 4 }}>✕</button>}
                           </div>
                         </div>
                         <div style={{ padding: '10px 14px', borderRadius: 10, background: isMe ? 'var(--accent)18' : 'var(--surface)', border: `1px solid ${isMe ? 'var(--accent)33' : 'var(--border)'}`, fontSize: 13, lineHeight: 1.5 }}>{c.content}</div>
@@ -145,22 +167,22 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
                 <div style={{ flex: 1 }}>
                   <textarea style={{ ...inp, height: 70, resize: 'none' }} placeholder="Kommentar schreiben..." value={newComment} onChange={e => setNewComment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment() } }} />
                 </div>
-                <button onClick={handleSendComment} disabled={!newComment.trim() || sendingComment} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: newComment.trim() ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: newComment.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 13, flexShrink: 0 }}>
-                  {sendingComment ? '...' : '↑'}
+                <button onClick={handleSendComment} disabled={!newComment.trim() || sendingComment} style={{ padding: '12px 16px', borderRadius: 8, border: 'none', background: newComment.trim() ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: newComment.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 18, flexShrink: 0 }}>
+                  ↑
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+        <div style={{ padding: isMobile ? '12px 16px' : '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
           {isAdminOrLeiter ? (
-            <button onClick={() => { onDelete(task.id); onClose() }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>🗑 Löschen</button>
+            <button onClick={() => { onDelete(task.id); onClose() }} style={{ padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>🗑 Löschen</button>
           ) : <div />}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Schließen</button>
+          <div style={{ display: 'flex', gap: 10, flex: isMobile ? 1 : 'none', justifyContent: 'flex-end' }}>
+            <button onClick={onClose} style={{ padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Schließen</button>
             {isAdminOrLeiter && (
-              <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false) }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false) }} style={{ flex: isMobile ? 1 : 'none', padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                 {saving ? 'Speichere...' : 'Speichern'}
               </button>
             )}
@@ -185,16 +207,11 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errMsg, setErrMsg] = useState('')
+  const isMobile = useIsMobile()
 
-  // Auto-Überfällig setzen
   async function markOverdue(taskList: any[]) {
     const today = new Date().toISOString().split('T')[0]
-    const toMark = taskList.filter(t =>
-      t.deadline &&
-      t.deadline < today &&
-      t.status !== 'Erledigt' &&
-      t.status !== 'Ueberfaellig'
-    )
+    const toMark = taskList.filter(t => t.deadline && t.deadline < today && t.status !== 'Erledigt' && t.status !== 'Ueberfaellig')
     await Promise.all(toMark.map(t => updateTask(t.id, { status: 'Ueberfaellig' })))
     return toMark.length > 0
   }
@@ -287,59 +304,53 @@ export default function TasksPage() {
   }
 
   const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
-  const abteilungColor = 'var(--accent)'
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>Aufgaben</h1>
-          {currentProfile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-              <Avatar name={currentProfile.full_name} color={abteilungColor} />
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{currentProfile.full_name} · {currentProfile.abteilung || currentProfile.role}</span>
-            </div>
-          )}
-        </div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h1 style={{ fontSize: isMobile ? 24 : 22, fontWeight: 800, letterSpacing: '-0.03em' }}>Aufgaben</h1>
         {isAdminOrLeiter && (
-          <button onClick={() => { setForm({ ...EMPTY, category: categories[0]?.name || '' }); setErrMsg(''); setCreateModal(true) }} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>+ Neue Aufgabe</button>
+          <button onClick={() => { setForm({ ...EMPTY, category: categories[0]?.name || '' }); setErrMsg(''); setCreateModal(true) }} style={{ padding: isMobile ? '10px 16px' : '9px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>+ Neu</button>
         )}
       </div>
 
+      {/* View Tabs */}
       {currentProfile?.role !== 'mitarbeiter' && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <button onClick={() => setView('mine')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'mine' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'mine' ? 'var(--accent)' : 'transparent', color: view === 'mine' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Meine Aufgaben</button>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+          <button onClick={() => setView('mine')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'mine' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'mine' ? 'var(--accent)' : 'transparent', color: view === 'mine' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Meine</button>
           {currentProfile?.role === 'bereichsleiter' && (
-            <button onClick={() => setView('team')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Meine Abteilung</button>
+            <button onClick={() => setView('team')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Abteilung</button>
           )}
           {currentProfile?.role === 'admin' && (
             <>
-              <button onClick={() => setView('team')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Meine Abteilung</button>
-              <button onClick={() => setView('all')} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${view === 'all' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'all' ? 'var(--accent)' : 'transparent', color: view === 'all' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Alle Aufgaben</button>
+              <button onClick={() => setView('team')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Abteilung</button>
+              <button onClick={() => setView('all')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'all' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'all' ? 'var(--accent)' : 'transparent', color: view === 'all' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Alle</button>
             </>
           )}
         </div>
       )}
 
       {/* Status Filter */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10, overflowX: 'auto', paddingBottom: 4 }}>
         {Object.entries(counts).map(([s, c]) => (
-          <button key={s} onClick={() => setStatusFilter(s)} style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${statusFilter === s ? 'var(--accent)' : 'var(--border)'}`, background: statusFilter === s ? 'var(--accent)' : 'var(--card)', color: statusFilter === s ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>{s} ({c})</button>
+          <button key={s} onClick={() => setStatusFilter(s)} style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${statusFilter === s ? 'var(--accent)' : 'var(--border)'}`, background: statusFilter === s ? 'var(--accent)' : 'var(--card)', color: statusFilter === s ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>{s} ({c})</button>
         ))}
       </div>
 
-      {/* Kategorie Filter — dynamisch */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        <button onClick={() => setCategoryFilter('Alle')} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${categoryFilter === 'Alle' ? 'var(--accent)' : 'var(--border)'}`, background: categoryFilter === 'Alle' ? 'var(--accent)22' : 'transparent', color: categoryFilter === 'Alle' ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>Alle</button>
+      {/* Kategorie Filter */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
+        <button onClick={() => setCategoryFilter('Alle')} style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${categoryFilter === 'Alle' ? 'var(--accent)' : 'var(--border)'}`, background: categoryFilter === 'Alle' ? 'var(--accent)22' : 'transparent', color: categoryFilter === 'Alle' ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Alle</button>
         {categories.map((cat: any) => (
-          <button key={cat.id} onClick={() => setCategoryFilter(cat.name)} style={{ padding: '4px 12px', borderRadius: 20, border: `1px solid ${categoryFilter === cat.name ? cat.color : 'var(--border)'}`, background: categoryFilter === cat.name ? `${cat.color}22` : 'transparent', color: categoryFilter === cat.name ? cat.color : 'var(--muted)', cursor: 'pointer', fontSize: 11, fontWeight: 600 }}>
+          <button key={cat.id} onClick={() => setCategoryFilter(cat.name)} style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${categoryFilter === cat.name ? cat.color : 'var(--border)'}`, background: categoryFilter === cat.name ? `${cat.color}22` : 'transparent', color: categoryFilter === cat.name ? cat.color : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
             {cat.icon} {cat.name}
           </button>
         ))}
       </div>
 
+      {/* Task Liste */}
       {loading ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Lade...</div> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
           {filtered.length === 0 && (
             <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40, background: 'var(--card)', borderRadius: 12, border: '1px solid var(--border)' }}>
               {view === 'mine' ? 'Dir sind keine Aufgaben zugewiesen' : 'Keine Aufgaben gefunden'}
@@ -354,6 +365,54 @@ export default function TasksPage() {
             const assignee = profiles.find((p: any) => p.id === task.assignee_id)
             const isMyTask = task.assignee_id === currentProfile?.id
             const commentCount = (task.comments || []).length
+
+            if (isMobile) {
+              // Mobile Task Card
+              return (
+                <div key={task.id} onClick={() => setSelectedTask(task)} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `4px solid ${cc}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', transition: 'transform 0.15s' }}>
+                  {/* Top Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div style={{ flex: 1, marginRight: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <span style={{ fontSize: 15, fontWeight: 700 }}>{task.title}</span>
+                        {isMyTask && <span style={{ fontSize: 9, padding: '2px 5px', borderRadius: 3, background: 'var(--accent)22', color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>MEINE</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: cc }}>{catIcon} {task.category}</span>
+                        <span style={{ fontSize: 12, color: pc, fontWeight: 600 }}>{task.priority}</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                      <span style={{ padding: '4px 10px', borderRadius: 12, background: sc.bg, color: sc.color, fontSize: 11, fontWeight: 600, border: `1px solid ${sc.color}44` }}>{task.status === 'Ueberfaellig' ? 'Überfällig' : task.status}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value} Pkt</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      {assignee && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <Avatar name={assignee.full_name} color={cc} size={20} />
+                          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{assignee.full_name.split(' ')[0]}</span>
+                        </div>
+                      )}
+                      {task.deadline && (
+                        <span style={{ fontSize: 12, color: task.status === 'Ueberfaellig' ? 'var(--red)' : 'var(--muted)' }}>
+                          ⏰ {formatDate(task.deadline)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {commentCount > 0 && <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>💬 {commentCount}</span>}
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}>›</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            }
+
+            // Desktop Task Card
             return (
               <div key={task.id} onClick={() => setSelectedTask(task)} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `3px solid ${cc}`, borderRadius: 12, padding: 18, display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'transform 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'translateX(3px)')}
@@ -369,11 +428,11 @@ export default function TasksPage() {
                     <Tag label={task.priority} color={pc} />
                     {assignee ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Avatar name={assignee.full_name} color="var(--accent)" size={18} />
+                        <Avatar name={assignee.full_name} color={cc} size={18} />
                         <span style={{ fontSize: 11, color: 'var(--muted)' }}>{assignee.full_name}</span>
                       </div>
                     ) : <Tag label="Nicht zugewiesen" color="var(--muted)" />}
-                    {task.deadline && <Tag label={`⏰ ${task.deadline}`} color="var(--muted)" />}
+                    {task.deadline && <Tag label={`⏰ ${formatDate(task.deadline)}`} color={task.status === 'Ueberfaellig' ? 'var(--red)' : 'var(--muted)'} />}
                   </div>
                 </div>
                 <select value={task.status} onClick={e => e.stopPropagation()} onChange={e => { updateTask(task.id, { status: e.target.value }); load() }} style={{ padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.color}44`, fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
@@ -383,7 +442,7 @@ export default function TasksPage() {
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value}</div>
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>Pkt</div>
                 </div>
-                <div style={{ fontSize: 11, color: commentCount > 0 ? 'var(--accent)' : 'var(--muted)', fontWeight: commentCount > 0 ? 600 : 400, minWidth: 24, textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: commentCount > 0 ? 'var(--accent)' : 'var(--muted)', fontWeight: commentCount > 0 ? 600 : 400, minWidth: 24 }}>
                   💬{commentCount > 0 ? ` ${commentCount}` : ''}
                 </div>
               </div>
@@ -394,8 +453,9 @@ export default function TasksPage() {
 
       {/* Neue Aufgabe Modal */}
       {createModal && (
-        <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && setCreateModal(false)}>
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 28, width: 520, maxWidth: '90vw' }}>
+        <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && setCreateModal(false)}>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: isMobile ? '20px 20px 0 0' : 16, padding: isMobile ? '24px 16px' : 28, width: isMobile ? '100%' : 520, maxHeight: isMobile ? '90vh' : 'auto', overflowY: 'auto' }}>
+            {isMobile && <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 20px' }} />}
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Neue Aufgabe</div>
             {errMsg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 16, background: '#ff4d6d22', color: 'var(--red)', fontSize: 13 }}>{errMsg}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -410,13 +470,13 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div><label style={lbl}>Priorität</label><select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
-                <div><label style={lbl}>Verantwortlicher</label><select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}><option value="">— Nicht zugewiesen —</option>{profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name} ({p.abteilung || p.role})</option>)}</select></div>
+                <div><label style={lbl}>Verantwortlicher</label><select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}><option value="">— Nicht zugewiesen —</option>{profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
                 <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-              <button onClick={() => setCreateModal(false)} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
-              <button onClick={handleCreate} disabled={!form.title || !form.category || saving} style={{ padding: '9px 18px', borderRadius: 8, border: 'none', background: form.title && form.category ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: form.title && form.category ? 'pointer' : 'not-allowed', fontWeight: 600 }}>{saving ? 'Speichere...' : 'Erstellen'}</button>
+              <button onClick={() => setCreateModal(false)} style={{ padding: '12px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
+              <button onClick={handleCreate} disabled={!form.title || !form.category || saving} style={{ flex: isMobile ? 1 : 'none', padding: '12px 18px', borderRadius: 8, border: 'none', background: form.title && form.category ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: form.title && form.category ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 14 }}>{saving ? 'Speichere...' : 'Erstellen'}</button>
             </div>
           </div>
         </div>
