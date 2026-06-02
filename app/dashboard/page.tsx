@@ -80,57 +80,68 @@ export default function DashboardPage() {
   const isBereichsleiter = profile?.role === 'bereichsleiter'
   const abteilungColor = TEAM_COLORS[profile?.abteilung] || 'var(--accent)'
 
-  // Meine Aufgaben
-  const myTasks = tasks.filter(t => t.assignee_id === profile?.id)
-  const myOffen = myTasks.filter(t => t.status === 'Offen').length
-  const myAktiv = myTasks.filter(t => t.status === 'In Bearbeitung').length
-  const myErledigt = myTasks.filter(t => t.status === 'Erledigt').length
-  const myUeberfaellig = myTasks.filter(t => t.status === 'Ueberfaellig').length
+  const myTasks = tasks.filter((t: any) => t.assignee_id === profile?.id)
+  const myOffen = myTasks.filter((t: any) => t.status === 'Offen').length
+  const myAktiv = myTasks.filter((t: any) => t.status === 'In Bearbeitung').length
+  const myErledigt = myTasks.filter((t: any) => t.status === 'Erledigt').length
+  const myUeberfaellig = myTasks.filter((t: any) => t.status === 'Ueberfaellig').length
 
-  // Team Aufgaben (für Bereichsleiter/Admin)
-  const teamMembers = profiles.filter(p => p.abteilung === profile?.abteilung)
-  const teamTasks = tasks.filter(t => teamMembers.some(m => m.id === t.assignee_id))
-  const teamUeberfaellig = teamTasks.filter(t => t.status === 'Ueberfaellig').length
-  const teamErledigt = teamTasks.filter(t => t.status === 'Erledigt').length
+  const teamMembers = profiles.filter((p: any) => p.abteilung === profile?.abteilung)
+  const teamTasks = tasks.filter((t: any) => teamMembers.some((m: any) => m.id === t.assignee_id))
+  const teamUeberfaellig = teamTasks.filter((t: any) => t.status === 'Ueberfaellig').length
+  const teamErledigt = teamTasks.filter((t: any) => t.status === 'Erledigt').length
 
-  // Alle Aufgaben (für Admin)
-  const alleUeberfaellig = tasks.filter(t => t.status === 'Ueberfaellig').length
-  const alleErledigt = tasks.filter(t => t.status === 'Erledigt').length
-  const alleOffen = tasks.filter(t => t.status === 'Offen').length
-  const alleAktiv = tasks.filter(t => t.status === 'In Bearbeitung').length
+  const alleUeberfaellig = tasks.filter((t: any) => t.status === 'Ueberfaellig').length
+  const alleErledigt = tasks.filter((t: any) => t.status === 'Erledigt').length
+  const alleOffen = tasks.filter((t: any) => t.status === 'Offen').length
+  const alleAktiv = tasks.filter((t: any) => t.status === 'In Bearbeitung').length
 
-  // Dringende Aufgaben (überfällig + offen mit nahem Datum)
-  const today = new Date().toISOString().split('T')[0]
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   const urgentTasks = myTasks
-    .filter(t => t.status === 'Ueberfaellig' || (t.status === 'Offen' && t.deadline && t.deadline <= nextWeek))
-    .sort((a, b) => {
+    .filter((t: any) => t.status === 'Ueberfaellig' || (t.status === 'Offen' && t.deadline && t.deadline <= nextWeek))
+    .sort((a: any, b: any) => {
       const order: Record<string, number> = { 'Ueberfaellig': 0, 'Offen': 1 }
       return (order[a.status] ?? 99) - (order[b.status] ?? 99)
     })
     .slice(0, 5)
 
-  // Wochenaktivität
-  const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
-  const weekActivity = days.map(day => {
-    const count = tasks.filter(t => {
-      if (t.status !== 'Erledigt') return false
-      return true // vereinfacht
-    }).length
-    return { day, value: Math.floor(Math.random() * 3) } // placeholder
-  })
-
-  const maxActivity = Math.max(...weekActivity.map(w => w.value), 1)
-
   const today2 = new Date().toLocaleDateString('de-DE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+  const myStatusRows = [
+    { label: 'Überfällig', value: myUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
+    { label: 'Offen', value: myOffen, color: 'var(--muted)', bg: 'var(--surface)' },
+    { label: 'In Bearbeitung', value: myAktiv, color: 'var(--yellow)', bg: '#ffd16622' },
+    { label: 'Erledigt', value: myErledigt, color: 'var(--green)', bg: '#00d4aa22' },
+  ]
+
+  const adminStatusRows = [
+    { label: 'Überfällig', value: alleUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
+    { label: 'Offen', value: alleOffen, color: 'var(--muted)', bg: 'var(--surface)' },
+    { label: 'In Bearbeitung', value: alleAktiv, color: 'var(--yellow)', bg: '#ffd16622' },
+    { label: 'Erledigt', value: alleErledigt, color: 'var(--green)', bg: '#00d4aa22' },
+  ]
+
+  const teamStatusRows = [
+    { label: 'Überfällig', value: teamUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
+    { label: 'Erledigt', value: teamErledigt, color: 'var(--green)', bg: '#00d4aa22' },
+    { label: 'Team-Mitglieder', value: teamMembers.length, color: abteilungColor, bg: `${abteilungColor}22` },
+    { label: 'Aufgaben gesamt', value: teamTasks.length, color: 'var(--muted)', bg: 'var(--surface)' },
+  ]
+
+  const schnellaktionen = [
+    { label: 'Aufgaben', href: '/dashboard/tasks', icon: '◈', color: 'var(--accent)' },
+    { label: 'Team', href: '/dashboard/team', icon: '◎', color: '#00d4aa' },
+    { label: 'Rangliste', href: '/dashboard/gamification', icon: '◆', color: 'var(--yellow)' },
+    ...(isAdmin ? [{ label: 'Einladen', href: '/dashboard/admin', icon: '⊕', color: '#a855f7' }] : []),
+  ]
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
       {/* Begrüßung */}
-      <div style={{ marginBottom: 24, padding: isMobile ? '20px 0 0' : 0 }}>
-        <div style={{ fontSize: isMobile ? 13 : 12, color: 'var(--muted)', marginBottom: 4 }}>{today2}</div>
-        <h1 style={{ fontSize: isMobile ? 26 : 28, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 6 }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{today2}</div>
+        <h1 style={{ fontSize: isMobile ? 26 : 28, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8 }}>
           {getGreeting()}, {profile?.full_name?.split(' ')[0]} 👋
         </h1>
         <div style={{ fontSize: 13, color: 'var(--muted)', padding: '8px 14px', borderRadius: 8, background: myUeberfaellig > 0 ? '#ff4d6d18' : 'var(--surface)', border: `1px solid ${myUeberfaellig > 0 ? '#ff4d6d44' : 'var(--border)'}`, display: 'inline-block' }}>
@@ -146,7 +157,7 @@ export default function DashboardPage() {
           { label: 'Erledigt', value: myErledigt, color: 'var(--green)', icon: '✅' },
           { label: 'Überfällig', value: myUeberfaellig, color: myUeberfaellig > 0 ? 'var(--red)' : 'var(--muted)', icon: myUeberfaellig > 0 ? '🚨' : '✓' },
         ].map((kpi, i) => (
-          <div key={i} style={{ background: 'var(--card)', border: `1px solid ${kpi.value > 0 && kpi.color === 'var(--red)' ? '#ff4d6d44' : 'var(--border)'}`, borderRadius: 12, padding: '16px', textAlign: 'center' }}>
+          <div key={i} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px', textAlign: 'center' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>{kpi.icon}</div>
             <div style={{ fontSize: isMobile ? 22 : 26, fontWeight: 800, color: kpi.color, lineHeight: 1 }}>{kpi.value}</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>{kpi.label}</div>
@@ -154,7 +165,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Meine dringenden Aufgaben */}
+      {/* Dringende Aufgaben */}
       {urgentTasks.length > 0 && (
         <div style={{ background: 'var(--card)', border: '1px solid #ff4d6d44', borderRadius: 12, marginBottom: 20, overflow: 'hidden' }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', background: '#ff4d6d08', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -182,24 +193,17 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Meine Aufgaben Übersicht */}
+      {/* Aufgaben Status + Team */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 20 }}>
-
-        {/* Aufgaben Status */}
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📋 Meine Aufgaben</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[
-              { label: 'Überfällig', value: myUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
-              { label: 'Offen', value: myOffen, color: 'var(--muted)', bg: 'var(--surface)' },
-              { label: 'In Bearbeitung', value: myAktiv, color: 'var(--yellow)', bg: '#ffd16622' },
-              { label: 'Erledigt', value: myErledigt, color: 'var(--green)', bg: '#00d4aa22' },
-            ].map((s, i) => (
+            {myStatusRows.map((s, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1, fontSize: 13, color: s.value > 0 ? 'var(--text)' : 'var(--muted)' }}>{s.label}</div>
+                <div style={{ flex: 1, fontSize: 13 }}>{s.label}</div>
                 <div style={{ padding: '3px 12px', borderRadius: 20, background: s.bg, color: s.color, fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>{s.value}</div>
                 <div style={{ width: 80, height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-                  <div style={{ width: `${myTasks.length > 0 ? (s.value / myTasks.length) * 100 : 0}%`, height: '100%', background: s.color, borderRadius: 3, transition: 'width 0.8s ease' }} />
+                  <div style={{ width: `${myTasks.length > 0 ? (s.value / myTasks.length) * 100 : 0}%`, height: '100%', background: s.color, borderRadius: 3 }} />
                 </div>
               </div>
             ))}
@@ -207,35 +211,23 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Admin/Bereichsleiter: Team Übersicht */}
         {(isAdmin || isBereichsleiter) && (
           <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>
               {isAdmin ? '🏢 Gesamt-Übersicht' : `👥 ${profile?.abteilung || 'Mein Team'}`}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {(isAdmin ? [
-                { label: 'Überfällig', value: alleUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
-                { label: 'Offen', value: alleOffen, color: 'var(--muted)', bg: 'var(--surface)' },
-                { label: 'In Bearbeitung', value: alleAktiv, color: 'var(--yellow)', bg: '#ffd16622' },
-                { label: 'Erledigt', value: alleErledigt, color: 'var(--green)', bg: '#00d4aa22' },
-              ] : [
-                { label: 'Überfällig', value: teamUeberfaellig, color: 'var(--red)', bg: '#ff4d6d22' },
-                { label: 'Erledigt', value: teamErledigt, color: 'var(--green)', bg: '#00d4aa22' },
-                { label: 'Team-Mitglieder', value: teamMembers.length, color: abteilungColor, bg: `${abteilungColor}22` },
-                { label: 'Aufgaben gesamt', value: teamTasks.length, color: 'var(--muted)', bg: 'var(--surface)' },
-              ] : []).map((s, i) => (
+              {(isAdmin ? adminStatusRows : teamStatusRows).map((s, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, fontSize: 13, color: s.value > 0 ? 'var(--text)' : 'var(--muted)' }}>{s.label}</div>
+                  <div style={{ flex: 1, fontSize: 13 }}>{s.label}</div>
                   <div style={{ padding: '3px 12px', borderRadius: 20, background: s.bg, color: s.color, fontSize: 13, fontWeight: 700, minWidth: 36, textAlign: 'center' }}>{s.value}</div>
                 </div>
               ))}
-              {isAdmin && <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>{tasks.length} Aufgaben total · {profiles.length} Mitarbeiter</div>}
+              {isAdmin && <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>{tasks.length} Aufgaben · {profiles.length} Mitarbeiter</div>}
             </div>
           </div>
         )}
 
-        {/* Mitarbeiter: Gamification */}
         {!isAdmin && !isBereichsleiter && (
           <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>🎮 Mein Fortschritt</div>
@@ -245,7 +237,7 @@ export default function DashboardPage() {
                 <span>Lv.{(profile?.level || 1) + 1} in {(profile?.xp_next || 500) - (profile?.xp || 0)} XP</span>
               </div>
               <div style={{ height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${Math.min(((profile?.xp || 0) / (profile?.xp_next || 500)) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg, ${abteilungColor}, var(--accent))`, borderRadius: 4, transition: 'width 0.8s ease' }} />
+                <div style={{ width: `${Math.min(((profile?.xp || 0) / (profile?.xp_next || 500)) * 100, 100)}%`, height: '100%', background: `linear-gradient(90deg, ${abteilungColor}, var(--accent))`, borderRadius: 4 }} />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -266,14 +258,9 @@ export default function DashboardPage() {
       <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>⚡ Schnellaktionen</div>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 10 }}>
-          {[
-            { label: 'Aufgaben', href: '/dashboard/tasks', icon: '◈', color: 'var(--accent)' },
-            { label: 'Team', href: '/dashboard/team', icon: '◎', color: '#00d4aa' },
-            { label: 'Rangliste', href: '/dashboard/gamification', icon: '◆', color: 'var(--yellow)' },
-            ...(isAdmin ? [{ label: 'Einladen', href: '/dashboard/admin', icon: '⊕', color: '#a855f7' }] : []),
-          ].map((a, i) => (
-            <a key={i} href={a.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 8px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', textDecoration: 'none', color: a.color, transition: 'all 0.2s' }}>
-              <span style={{ fontSize: 24 }}>{a.icon}</span>
+          {schnellaktionen.map((a, i) => (
+            <a key={i} href={a.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 8px', borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', textDecoration: 'none', transition: 'all 0.2s' }}>
+              <span style={{ fontSize: 24, color: a.color }}>{a.icon}</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{a.label}</span>
             </a>
           ))}
