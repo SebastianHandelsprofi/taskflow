@@ -264,6 +264,10 @@ export default function TasksPage() {
       const ORDER: Record<string, number> = { 'Ueberfaellig': 0, 'Offen': 1, 'In Bearbeitung': 2, 'Erledigt': 3 }
       return (ORDER[a.status] ?? 99) - (ORDER[b.status] ?? 99)
     })
+    .sort((a, b) => {
+      const ORDER: Record<string, number> = { 'Ueberfaellig': 0, 'Offen': 1, 'In Bearbeitung': 2, 'Erledigt': 3 }
+      return (ORDER[a.status] ?? 99) - (ORDER[b.status] ?? 99)
+    })
 
   const counts: Record<string, number> = {
     'Alle': viewFiltered.length,
