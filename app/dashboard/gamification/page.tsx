@@ -33,7 +33,7 @@ export default function GamificationPage() {
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em' }}>Rangliste & Achievements</h1>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16 }}>
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>🏆 Monats-Rangliste</div>
           {leaderboard.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>Noch keine Daten</div>}
@@ -61,7 +61,7 @@ export default function GamificationPage() {
 
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>🎖 Achievements</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
             {badges.map((b: any) => (
               <div key={b.id} style={{ padding: 14, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: 26, marginBottom: 6 }}>{b.icon}</div>
