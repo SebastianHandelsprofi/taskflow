@@ -22,7 +22,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   const { name, logo_url } = await request.json()
   const updates: any = {}
-  if (name !== undefined) updates.name = name
+  if (name !== undefined) { updates.name = name; updates.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") }
   if (logo_url !== undefined) updates.logo_url = logo_url
 
   const { data, error } = await sb
