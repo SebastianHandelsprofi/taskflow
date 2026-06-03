@@ -14,11 +14,13 @@ const ADMIN_NAV = [
   { href: '/dashboard/admin', icon: '⚙', label: 'Team verwalten' },
   { href: '/dashboard/teams', icon: '◫', label: 'Abteilungen' },
   { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
+  { href: '/dashboard/settings', icon: '🏢', label: 'Unternehmen' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [profile, setProfile] = useState<any>(null)
+  const [tenant, setTenant] = useState<any>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -32,10 +34,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     createClient().auth.getUser().then(async ({ data }: any) => {
       if (data.user) {
-        const res = await fetch('/api/profiles')
-        const profiles = await res.json()
+        const [profRes, tenantRes] = await Promise.all([
+          fetch('/api/profiles'),
+          fetch('/api/tenant')
+        ])
+        const profiles = await profRes.json()
+        const tenantData = await tenantRes.json()
         const me = profiles.find((p: any) => p.id === data.user.id)
         setProfile(me)
+        setTenant(tenantData)
       }
     })
   }, [])
@@ -50,30 +57,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
-
-        {/* Mobile Header */}
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0, zIndex: 10 }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff' }}>TF</div>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>TaskFlow</div>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff', flexShrink: 0 }}>TF</div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>TaskFlow</div>
+              {tenant?.name && <div style={{ fontSize: 10, color: 'var(--muted)', lineHeight: 1.2 }}>{tenant.name}</div>}
+            </div>
+            {tenant?.logo_url && (
+              <>
+                <div style={{ width: 1, height: 28, background: 'var(--border)' }} />
+                <img src={tenant.logo_url} alt="Logo" style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'contain' }} />
+              </>
+            )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {profile && (
               <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'right' }}>
-                <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 12 }}>{profile.full_name}</div>
-                <div>{profile.role} · {profile.abteilung || '—'}</div>
+                <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 11 }}>{profile.full_name}</div>
+                <div style={{ fontSize: 10 }}>{profile.role} · {profile.abteilung || '—'}</div>
               </div>
             )}
-            {/* Menu Button für alle User */}
-            <button onClick={() => setMenuOpen(!menuOpen)} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)', background: menuOpen ? 'var(--accent)' : 'transparent', color: menuOpen ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid var(--border)', background: menuOpen ? 'var(--accent)' : 'transparent', color: menuOpen ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               ☰
             </button>
           </div>
         </header>
 
-        {/* Dropdown Menu für alle */}
         {menuOpen && (
-          <div style={{ position: 'absolute', top: 60, right: 8, zIndex: 100, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 8, minWidth: 200, boxShadow: '0 8px 32px #00000044' }}>
+          <div style={{ position: 'absolute', top: 58, right: 8, zIndex: 100, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 8, minWidth: 200, boxShadow: '0 8px 32px #00000044' }}>
             {isAdmin && (
               <>
                 <div style={{ fontSize: 10, color: 'var(--muted)', padding: '6px 14px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin</div>
@@ -91,12 +103,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         )}
 
-        {/* Content */}
         <main style={{ flex: 1, overflowY: 'auto', padding: '16px', paddingBottom: 80 }} onClick={() => menuOpen && setMenuOpen(false)}>
           {children}
         </main>
 
-        {/* Bottom Navigation */}
         <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', zIndex: 50, paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {NAV.map(n => {
             const active = pathname === n.href
@@ -116,12 +126,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <aside style={{ width: 220, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
-        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid var(--border)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#fff' }}>TF</div>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>TaskFlow</div>
-            <div style={{ fontSize: 10, color: 'var(--muted)' }}>PRO · v1.0</div>
+        
+        {/* TaskFlow Logo */}
+        <div style={{ padding: '0 20px 16px', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: tenant?.name ? 12 : 0 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 900, color: '#fff', flexShrink: 0 }}>TF</div>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>TaskFlow</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)' }}>PRO · v1.0</div>
+            </div>
           </div>
+
+          {/* Tenant Branding */}
+          {tenant?.name && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--border)' }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                {tenant.logo_url
+                  ? <img src={tenant.logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  : <span style={{ fontSize: 16 }}>🏢</span>
+                }
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tenant.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--muted)' }}>Ihr Unternehmen</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {NAV.map(n => {
