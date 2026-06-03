@@ -13,7 +13,7 @@ export async function GET() {
     .from('categories')
     .select('*')
     .eq('tenant_id', TENANT_ID)
-    .order("name")
+    .order('name')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])
 }
@@ -31,15 +31,24 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const { id, name, color, icon } = await request.json()
-  const { data, error } = await sb
+  const { id, name, color, icon, oldName } = await request.json()
+
+  const { error } = await sb
     .from('categories')
     .update({ name, color, icon })
     .eq('id', id)
-    .select()
-    .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  // Falls Name geändert → alle Aufgaben updaten
+  if (oldName && oldName !== name) {
+    await sb.from('tasks')
+      .update({ category: name, kategorie: name })
+      .eq('category', oldName)
+      .eq('tenant_id', TENANT_ID)
+  }
+
+  return NextResponse.json({ success: true })
 }
 
 export async function DELETE(request: Request) {
