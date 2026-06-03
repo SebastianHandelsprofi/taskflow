@@ -21,17 +21,43 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   const { name, logo_url } = await request.json()
-  const updates: any = {}
-  if (name !== undefined) { updates.name = name; updates.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") }
-  if (logo_url !== undefined) updates.logo_url = logo_url
 
-  const { data, error } = await sb
-    .from('tenants')
-    .update(updates)
-    .eq('id', TENANT_ID)
-    .select('id, name, logo_url')
-    .single()
+  // Raw SQL um slug nicht anzufassen
+  const parts: string[] = []
+  const values: any[] = []
+  let idx = 1
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+  if (name !== undefined) {
+    parts.push(`name = $${idx}`)
+    values.push(name)
+    idx++
+  }
+  if (logo_url !== undefined) {
+    parts.push(`logo_url = $${idx}`)
+    values.push(logo_url)
+    idx++
+  }
+
+  if (parts.length === 0) return NextResponse.json({ success: true })
+
+  values.push(TENANT_ID)
+  const sql = `update public.tenants set ${parts.join(', ')} where id = $${idx}`
+
+  const { error } = await sb.rpc('exec_sql', { sql_query: sql, params: values })
+
+  if (error) {
+    // Fallback: direkt updaten ohne slug
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (logo_url !== undefined) updateData.logo_url = logo_url
+
+    const { error: error2 } = await sb
+      .from('tenants')
+      .update(updateData)
+      .eq('id', TENANT_ID)
+
+    if (error2) return NextResponse.json({ error: error2.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
 }
