@@ -16,13 +16,6 @@ const ADMIN_NAV = [
   { href: '/dashboard/categories', icon: '⊞', label: 'Kategorien' },
 ]
 
-const STATUS_ORDER: Record<string, number> = {
-  'Ueberfaellig': 0,
-  'Offen': 1,
-  'In Bearbeitung': 2,
-  'Erledigt': 3,
-}
-
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [profile, setProfile] = useState<any>(null)
@@ -57,6 +50,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (isMobile) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg)' }}>
+
+        {/* Mobile Header */}
         <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', flexShrink: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 900, color: '#fff' }}>TF</div>
@@ -69,37 +64,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div>{profile.role} · {profile.abteilung || '—'}</div>
               </div>
             )}
-            {isAdmin && (
-              <button onClick={() => setMenuOpen(!menuOpen)} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)', background: menuOpen ? 'var(--accent)' : 'transparent', color: menuOpen ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                ⚙
-              </button>
-            )}
+            {/* Menu Button für alle User */}
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)', background: menuOpen ? 'var(--accent)' : 'transparent', color: menuOpen ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ☰
+            </button>
           </div>
         </header>
 
-        {menuOpen && isAdmin && (
+        {/* Dropdown Menu für alle */}
+        {menuOpen && (
           <div style={{ position: 'absolute', top: 60, right: 8, zIndex: 100, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 8, minWidth: 200, boxShadow: '0 8px 32px #00000044' }}>
-            {ADMIN_NAV.map(n => (
-              <a key={n.href} href={n.href} onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 8, background: pathname === n.href ? 'var(--accent)22' : 'transparent', color: pathname === n.href ? 'var(--accent)' : 'var(--text)', fontSize: 14, fontWeight: pathname === n.href ? 600 : 400 }}>
-                <span>{n.icon}</span>{n.label}
-              </a>
-            ))}
-            <div style={{ margin: '8px 0', borderTop: '1px solid var(--border)' }} />
+            {isAdmin && (
+              <>
+                <div style={{ fontSize: 10, color: 'var(--muted)', padding: '6px 14px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin</div>
+                {ADMIN_NAV.map(n => (
+                  <a key={n.href} href={n.href} onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 8, background: pathname === n.href ? 'var(--accent)22' : 'transparent', color: pathname === n.href ? 'var(--accent)' : 'var(--text)', fontSize: 14, fontWeight: pathname === n.href ? 600 : 400, textDecoration: 'none' }}>
+                    <span>{n.icon}</span>{n.label}
+                  </a>
+                ))}
+                <div style={{ margin: '8px 0', borderTop: '1px solid var(--border)' }} />
+              </>
+            )}
             <button onClick={handleSignOut} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--red)', cursor: 'pointer', fontSize: 14, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
               ← Abmelden
             </button>
           </div>
         )}
 
-        <main style={{ flex: 1, overflowY: 'auto', padding: '16px', paddingBottom: 80 }}>
+        {/* Content */}
+        <main style={{ flex: 1, overflowY: 'auto', padding: '16px', paddingBottom: 80 }} onClick={() => menuOpen && setMenuOpen(false)}>
           {children}
         </main>
 
+        {/* Bottom Navigation */}
         <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', zIndex: 50, paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {NAV.map(n => {
             const active = pathname === n.href
             return (
-              <a key={n.href} href={n.href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', color: active ? 'var(--accent)' : 'var(--muted)', fontSize: 10, fontWeight: active ? 700 : 400, gap: 4, transition: 'color 0.2s' }}>
+              <a key={n.href} href={n.href} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', color: active ? 'var(--accent)' : 'var(--muted)', fontSize: 10, fontWeight: active ? 700 : 400, gap: 4, transition: 'color 0.2s', textDecoration: 'none' }}>
                 <span style={{ fontSize: 20 }}>{n.icon}</span>
                 <span>{n.label}</span>
               </a>
@@ -110,6 +112,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
+  // Desktop Layout
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <aside style={{ width: 220, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 }}>
@@ -124,7 +127,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {NAV.map(n => {
           const active = pathname === n.href
           return (
-            <a key={n.href} href={n.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: active ? '#6c63ff18' : 'transparent', borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent', color: active ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.2s' }}>
+            <a key={n.href} href={n.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: active ? '#6c63ff18' : 'transparent', borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent', color: active ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.2s', textDecoration: 'none' }}>
               <span>{n.icon}</span>{n.label}
             </a>
           )
@@ -140,7 +143,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {ADMIN_NAV.map(n => {
               const active = pathname === n.href
               return (
-                <a key={n.href} href={n.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: active ? '#6c63ff18' : 'transparent', borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent', color: active ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.2s' }}>
+                <a key={n.href} href={n.href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 20px', background: active ? '#6c63ff18' : 'transparent', borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent', color: active ? 'var(--text)' : 'var(--muted)', fontSize: 13, fontWeight: active ? 600 : 400, transition: 'all 0.2s', textDecoration: 'none' }}>
                   <span>{n.icon}</span>{n.label}
                 </a>
               )
