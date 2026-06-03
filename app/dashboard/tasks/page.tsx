@@ -43,6 +43,16 @@ function useIsMobile() {
   return isMobile
 }
 
+function getAssignableProfiles(profiles: any[], currentProfile: any) {
+  if (!currentProfile) return []
+  if (currentProfile.role === 'admin') return profiles
+  if (currentProfile.role === 'bereichsleiter') {
+    return profiles.filter((p: any) => p.abteilung === currentProfile.abteilung)
+  }
+  // Mitarbeiter → nur sich selbst
+  return profiles.filter((p: any) => p.id === currentProfile.id)
+}
+
 function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave, onDelete }: any) {
   const [form, setForm] = useState({ ...task, assignee_id: task.assignee_id || '', deadline: task.deadline || '' })
   const [comments, setComments] = useState<any[]>([])
@@ -51,6 +61,12 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
   const [sendingComment, setSendingComment] = useState(false)
   const [tab, setTab] = useState<'details' | 'comments'>('details')
   const isMobile = useIsMobile()
+
+  const assignableProfiles = getAssignableProfiles(profiles, currentProfile)
+  const isAdmin = currentProfile?.role === 'admin'
+  const isBereichsleiter = currentProfile?.role === 'bereichsleiter'
+  const isMitarbeiter = currentProfile?.role === 'mitarbeiter'
+  const canEdit = isAdmin || isBereichsleiter || isMitarbeiter
 
   useEffect(() => { loadComments() }, [task.id])
 
@@ -83,13 +99,11 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
 
   const catObj = categories.find((c: any) => c.name === form.category)
   const cc = catObj?.color || 'var(--accent)'
-  const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && onClose()}>
       <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: isMobile ? '20px 20px 0 0' : 16, width: isMobile ? '100%' : 580, maxWidth: '100%', maxHeight: isMobile ? '92vh' : '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        
-        {/* Handle bar on mobile */}
+
         {isMobile && <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border)', margin: '12px auto 0' }} />}
 
         <div style={{ padding: isMobile ? '16px 20px 12px' : '20px 24px', borderBottom: '1px solid var(--border)', borderLeft: `4px solid ${cc}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -111,28 +125,57 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
         <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? 16 : 24 }}>
           {tab === 'details' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div><label style={lbl}>Titel</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
-              <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 80, resize: 'vertical' }} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} /></div>
+              <div><label style={lbl}>Titel</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} disabled={isMitarbeiter} /></div>
+              <div><label style={lbl}>Beschreibung</label><textarea style={{ ...inp, height: 80, resize: 'vertical' }} value={form.description || ''} onChange={e => setForm({ ...form, description: e.target.value })} disabled={isMitarbeiter} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={lbl}>Kategorie</label>
-                  <select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                  <select style={inp} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} disabled={isMitarbeiter}>
                     <option value="">— Wählen —</option>
                     {categories.map((c: any) => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
                   </select>
                 </div>
-                <div><label style={lbl}>Priorität</label><select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
-                <div><label style={lbl}>Status</label><select style={inp} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></div>
                 <div>
-                  <label style={lbl}>Verantwortlicher</label>
-                  <select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
-                    <option value="">— Nicht zugewiesen —</option>
-                    {profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  <label style={lbl}>Priorität</label>
+                  <select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} disabled={isMitarbeiter}>
+                    {PRIORITIES.map(p => <option key={p}>{p}</option>)}
                   </select>
                 </div>
-                <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
-                <div><label style={lbl}>Punkte</label><input type="number" style={inp} value={form.points_value} onChange={e => setForm({ ...form, points_value: Number(e.target.value) })} /></div>
+                <div>
+                  <label style={lbl}>Status</label>
+                  <select style={inp} value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                    {STATUSES.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>
+                    Verantwortlicher
+                    {isMitarbeiter && <span style={{ color: 'var(--muted)', marginLeft: 4 }}>(nur du)</span>}
+                    {isBereichsleiter && <span style={{ color: 'var(--muted)', marginLeft: 4 }}>(dein Team)</span>}
+                  </label>
+                  <select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
+                    <option value="">— Nicht zugewiesen —</option>
+                    {assignableProfiles.map((p: any) => (
+                      <option key={p.id} value={p.id}>
+                        {p.full_name} {p.id === currentProfile?.id ? '(Ich)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={lbl}>Deadline</label>
+                  <input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} disabled={isMitarbeiter} />
+                </div>
+                <div>
+                  <label style={lbl}>Punkte</label>
+                  <input type="number" style={inp} value={form.points_value} onChange={e => setForm({ ...form, points_value: Number(e.target.value) })} disabled={isMitarbeiter} />
+                </div>
               </div>
+              {isMitarbeiter && (
+                <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--muted)' }}>
+                  💡 Als Mitarbeiter kannst du den Status ändern und dir selbst zuweisen.
+                </div>
+              )}
             </div>
           )}
 
@@ -167,25 +210,21 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
                 <div style={{ flex: 1 }}>
                   <textarea style={{ ...inp, height: 70, resize: 'none' }} placeholder="Kommentar schreiben..." value={newComment} onChange={e => setNewComment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment() } }} />
                 </div>
-                <button onClick={handleSendComment} disabled={!newComment.trim() || sendingComment} style={{ padding: '12px 16px', borderRadius: 8, border: 'none', background: newComment.trim() ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: newComment.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 18, flexShrink: 0 }}>
-                  ↑
-                </button>
+                <button onClick={handleSendComment} disabled={!newComment.trim() || sendingComment} style={{ padding: '12px 16px', borderRadius: 8, border: 'none', background: newComment.trim() ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: newComment.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 18, flexShrink: 0 }}>↑</button>
               </div>
             </div>
           )}
         </div>
 
         <div style={{ padding: isMobile ? '12px 16px' : '16px 24px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-          {isAdminOrLeiter ? (
+          {isAdmin || isBereichsleiter ? (
             <button onClick={() => { onDelete(task.id); onClose() }} style={{ padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>🗑 Löschen</button>
           ) : <div />}
           <div style={{ display: 'flex', gap: 10, flex: isMobile ? 1 : 'none', justifyContent: 'flex-end' }}>
             <button onClick={onClose} style={{ padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>Schließen</button>
-            {isAdminOrLeiter && (
-              <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false) }} style={{ flex: isMobile ? 1 : 'none', padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
-                {saving ? 'Speichere...' : 'Speichern'}
-              </button>
-            )}
+            <button onClick={async () => { setSaving(true); await onSave(form); setSaving(false) }} style={{ flex: isMobile ? 1 : 'none', padding: isMobile ? '12px 16px' : '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              {saving ? 'Speichere...' : 'Speichern'}
+            </button>
           </div>
         </div>
       </div>
@@ -260,11 +299,7 @@ export default function TasksPage() {
   const filtered = viewFiltered
     .filter(t => statusFilter === 'Alle' || t.status === statusFilter)
     .filter(t => categoryFilter === 'Alle' || t.category === categoryFilter)
-    .sort((a, b) => {
-      const ORDER: Record<string, number> = { 'Ueberfaellig': 0, 'Offen': 1, 'In Bearbeitung': 2, 'Erledigt': 3 }
-      return (ORDER[a.status] ?? 99) - (ORDER[b.status] ?? 99)
-    })
-    .sort((a, b) => {
+    .sort((a: any, b: any) => {
       const ORDER: Record<string, number> = { 'Ueberfaellig': 0, 'Offen': 1, 'In Bearbeitung': 2, 'Erledigt': 3 }
       return (ORDER[a.status] ?? 99) - (ORDER[b.status] ?? 99)
     })
@@ -277,76 +312,87 @@ export default function TasksPage() {
     'Ueberfaellig': viewFiltered.filter(t => t.status === 'Ueberfaellig').length,
   }
 
+  const assignableProfiles = getAssignableProfiles(profiles, currentProfile)
+  const isAdmin = currentProfile?.role === 'admin'
+  const isBereichsleiter = currentProfile?.role === 'bereichsleiter'
+  const isMitarbeiter = currentProfile?.role === 'mitarbeiter'
+  const canCreate = isAdmin || isBereichsleiter || isMitarbeiter
+
   async function handleCreate() {
     setErrMsg('')
     if (!form.title || !form.category) { setErrMsg('Titel und Kategorie sind Pflichtfelder'); return }
     setSaving(true)
     try {
+      const assigneeId = isMitarbeiter ? currentProfile?.id : (form.assignee_id || null)
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: form.title, description: form.description || null,
-          category: form.category, priority: form.priority, status: 'Offen',
-          assignee_id: form.assignee_id || null, deadline: form.deadline || null,
-          points_value: form.points_value, tenant_id: TENANT_ID,
-          created_by: currentProfile?.id, kategorie: form.category,
+          title: form.title,
+          description: form.description || null,
+          category: form.category,
+          priority: isMitarbeiter ? 'Mittel' : form.priority,
+          status: 'Offen',
+          assignee_id: assigneeId,
+          deadline: isMitarbeiter ? null : (form.deadline || null),
+          points_value: isMitarbeiter ? 80 : form.points_value,
+          tenant_id: TENANT_ID,
+          created_by: currentProfile?.id,
+          kategorie: form.category,
         })
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
-      setCreateModal(false); setForm(EMPTY); load()
+      setCreateModal(false)
+      setForm(EMPTY)
+      load()
     } catch (e: any) { setErrMsg('Fehler: ' + e.message) }
     setSaving(false)
   }
 
   async function handleSaveTask(updatedForm: any) {
     await updateTask(updatedForm.id, {
-      title: updatedForm.title, description: updatedForm.description || null,
-      category: updatedForm.category, priority: updatedForm.priority,
-      status: updatedForm.status, assignee_id: updatedForm.assignee_id || null,
-      deadline: updatedForm.deadline || null, points_value: updatedForm.points_value,
+      title: updatedForm.title,
+      description: updatedForm.description || null,
+      category: updatedForm.category,
+      priority: updatedForm.priority,
+      status: updatedForm.status,
+      assignee_id: updatedForm.assignee_id || null,
+      deadline: updatedForm.deadline || null,
+      points_value: updatedForm.points_value,
       kategorie: updatedForm.category,
     })
-    setSelectedTask(null); load()
+    setSelectedTask(null)
+    load()
   }
-
-  const isAdminOrLeiter = currentProfile?.role === 'admin' || currentProfile?.role === 'bereichsleiter'
 
   return (
     <div>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: isMobile ? 24 : 22, fontWeight: 800, letterSpacing: '-0.03em' }}>Aufgaben</h1>
-        {isAdminOrLeiter && (
-          <button onClick={() => { setForm({ ...EMPTY, category: categories[0]?.name || '' }); setErrMsg(''); setCreateModal(true) }} style={{ padding: isMobile ? '10px 16px' : '9px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>+ Neu</button>
+        {canCreate && (
+          <button onClick={() => {
+            setForm({ ...EMPTY, category: categories[0]?.name || '', assignee_id: isMitarbeiter ? currentProfile?.id : '' })
+            setErrMsg('')
+            setCreateModal(true)
+          }} style={{ padding: isMobile ? '10px 16px' : '9px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>+ Neu</button>
         )}
       </div>
 
-      {/* View Tabs */}
       {currentProfile?.role !== 'mitarbeiter' && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
           <button onClick={() => setView('mine')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'mine' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'mine' ? 'var(--accent)' : 'transparent', color: view === 'mine' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Meine</button>
-          {currentProfile?.role === 'bereichsleiter' && (
-            <button onClick={() => setView('team')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Abteilung</button>
-          )}
-          {currentProfile?.role === 'admin' && (
-            <>
-              <button onClick={() => setView('team')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Abteilung</button>
-              <button onClick={() => setView('all')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'all' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'all' ? 'var(--accent)' : 'transparent', color: view === 'all' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Alle</button>
-            </>
-          )}
+          <button onClick={() => setView('team')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'team' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'team' ? 'var(--accent)' : 'transparent', color: view === 'team' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Abteilung</button>
+          {isAdmin && <button onClick={() => setView('all')} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${view === 'all' ? 'var(--accent)' : 'var(--border)'}`, background: view === 'all' ? 'var(--accent)' : 'transparent', color: view === 'all' ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Alle</button>}
         </div>
       )}
 
-      {/* Status Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10, overflowX: 'auto', paddingBottom: 4 }}>
         {Object.entries(counts).map(([s, c]) => (
           <button key={s} onClick={() => setStatusFilter(s)} style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${statusFilter === s ? 'var(--accent)' : 'var(--border)'}`, background: statusFilter === s ? 'var(--accent)' : 'var(--card)', color: statusFilter === s ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>{s} ({c})</button>
         ))}
       </div>
 
-      {/* Kategorie Filter */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto', paddingBottom: 4 }}>
         <button onClick={() => setCategoryFilter('Alle')} style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${categoryFilter === 'Alle' ? 'var(--accent)' : 'var(--border)'}`, background: categoryFilter === 'Alle' ? 'var(--accent)22' : 'transparent', color: categoryFilter === 'Alle' ? 'var(--accent)' : 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>Alle</button>
         {categories.map((cat: any) => (
@@ -356,7 +402,6 @@ export default function TasksPage() {
         ))}
       </div>
 
-      {/* Task Liste */}
       {loading ? <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Lade...</div> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 10 }}>
           {filtered.length === 0 && (
@@ -375,17 +420,15 @@ export default function TasksPage() {
             const commentCount = (task.comments || []).length
 
             if (isMobile) {
-              // Mobile Task Card
               return (
-                <div key={task.id} onClick={() => setSelectedTask(task)} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `4px solid ${cc}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', transition: 'transform 0.15s' }}>
-                  {/* Top Row */}
+                <div key={task.id} onClick={() => setSelectedTask(task)} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `4px solid ${cc}`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <div style={{ flex: 1, marginRight: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                         <span style={{ fontSize: 15, fontWeight: 700 }}>{task.title}</span>
                         {isMyTask && <span style={{ fontSize: 9, padding: '2px 5px', borderRadius: 3, background: 'var(--accent)22', color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>MEINE</span>}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: cc }}>{catIcon} {task.category}</span>
                         <span style={{ fontSize: 12, color: pc, fontWeight: 600 }}>{task.priority}</span>
                       </div>
@@ -395,8 +438,6 @@ export default function TasksPage() {
                       <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value} Pkt</span>
                     </div>
                   </div>
-
-                  {/* Bottom Row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                       {assignee && (
@@ -405,11 +446,7 @@ export default function TasksPage() {
                           <span style={{ fontSize: 12, color: 'var(--muted)' }}>{assignee.full_name.split(' ')[0]}</span>
                         </div>
                       )}
-                      {task.deadline && (
-                        <span style={{ fontSize: 12, color: task.status === 'Ueberfaellig' ? 'var(--red)' : 'var(--muted)' }}>
-                          ⏰ {formatDate(task.deadline)}
-                        </span>
-                      )}
+                      {task.deadline && <span style={{ fontSize: 12, color: task.status === 'Ueberfaellig' ? 'var(--red)' : 'var(--muted)' }}>⏰ {formatDate(task.deadline)}</span>}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {commentCount > 0 && <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>💬 {commentCount}</span>}
@@ -420,7 +457,6 @@ export default function TasksPage() {
               )
             }
 
-            // Desktop Task Card
             return (
               <div key={task.id} onClick={() => setSelectedTask(task)} style={{ background: 'var(--card)', border: `1px solid ${isMyTask ? cc + '44' : 'var(--border)'}`, borderLeft: `3px solid ${cc}`, borderRadius: 12, padding: 18, display: 'flex', alignItems: 'center', gap: 16, cursor: 'pointer', transition: 'transform 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'translateX(3px)')}
@@ -464,7 +500,8 @@ export default function TasksPage() {
         <div style={{ position: 'fixed', inset: 0, background: '#00000088', backdropFilter: 'blur(4px)', display: 'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 100 }} onClick={e => e.target === e.currentTarget && setCreateModal(false)}>
           <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: isMobile ? '20px 20px 0 0' : 16, padding: isMobile ? '24px 16px' : 28, width: isMobile ? '100%' : 520, maxHeight: isMobile ? '90vh' : 'auto', overflowY: 'auto' }}>
             {isMobile && <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 20px' }} />}
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>Neue Aufgabe</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>Neue Aufgabe</div>
+            {isMitarbeiter && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'var(--surface)' }}>💡 Die Aufgabe wird dir automatisch zugewiesen.</div>}
             {errMsg && <div style={{ padding: '10px', borderRadius: 8, marginBottom: 16, background: '#ff4d6d22', color: 'var(--red)', fontSize: 13 }}>{errMsg}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div><label style={lbl}>Titel *</label><input style={inp} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Aufgabentitel..." /></div>
@@ -477,14 +514,41 @@ export default function TasksPage() {
                     {categories.map((c: any) => <option key={c.id} value={c.name}>{c.icon} {c.name}</option>)}
                   </select>
                 </div>
-                <div><label style={lbl}>Priorität</label><select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>{PRIORITIES.map(p => <option key={p}>{p}</option>)}</select></div>
-                <div><label style={lbl}>Verantwortlicher</label><select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}><option value="">— Nicht zugewiesen —</option>{profiles.map((p: any) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select></div>
-                <div><label style={lbl}>Deadline</label><input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} /></div>
+                {!isMitarbeiter && (
+                  <div>
+                    <label style={lbl}>Priorität</label>
+                    <select style={inp} value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                      {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+                    </select>
+                  </div>
+                )}
+                {!isMitarbeiter && (
+                  <div>
+                    <label style={lbl}>
+                      Verantwortlicher
+                      {isBereichsleiter && <span style={{ color: 'var(--muted)', marginLeft: 4, fontSize: 10 }}>(dein Team)</span>}
+                    </label>
+                    <select style={inp} value={form.assignee_id} onChange={e => setForm({ ...form, assignee_id: e.target.value })}>
+                      <option value="">— Nicht zugewiesen —</option>
+                      {assignableProfiles.map((p: any) => (
+                        <option key={p.id} value={p.id}>{p.full_name} {p.id === currentProfile?.id ? '(Ich)' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {!isMitarbeiter && (
+                  <div>
+                    <label style={lbl}>Deadline</label>
+                    <input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} />
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => setCreateModal(false)} style={{ padding: '12px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
-              <button onClick={handleCreate} disabled={!form.title || !form.category || saving} style={{ flex: isMobile ? 1 : 'none', padding: '12px 18px', borderRadius: 8, border: 'none', background: form.title && form.category ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: form.title && form.category ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 14 }}>{saving ? 'Speichere...' : 'Erstellen'}</button>
+              <button onClick={handleCreate} disabled={!form.title || !form.category || saving} style={{ flex: isMobile ? 1 : 'none', padding: '12px 18px', borderRadius: 8, border: 'none', background: form.title && form.category ? 'var(--accent)' : 'var(--border)', color: '#fff', cursor: form.title && form.category ? 'pointer' : 'not-allowed', fontWeight: 600, fontSize: 14 }}>
+                {saving ? 'Speichere...' : 'Erstellen'}
+              </button>
             </div>
           </div>
         </div>
