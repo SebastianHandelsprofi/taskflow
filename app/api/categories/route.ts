@@ -13,7 +13,7 @@ export async function GET() {
     .from('categories')
     .select('*')
     .eq('tenant_id', TENANT_ID)
-    .order('name')
+    .order("name")
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])
 }
