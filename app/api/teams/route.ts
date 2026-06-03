@@ -42,6 +42,25 @@ export async function POST(request: Request) {
   return NextResponse.json(data)
 }
 
+export async function PUT(request: Request) {
+  const { id, name, color, oldName } = await request.json()
+
+  // Abteilung in teams updaten
+  const { error: teamError } = await sb
+    .from('teams')
+    .update({ name, color })
+    .eq('id', id)
+
+  if (teamError) return NextResponse.json({ error: teamError.message }, { status: 500 })
+
+  // Falls Name geändert → alle Profile updaten
+  if (oldName && oldName !== name) {
+    await sb.from('profiles').update({ abteilung: name }).eq('abteilung', oldName)
+  }
+
+  return NextResponse.json({ success: true })
+}
+
 export async function DELETE(request: Request) {
   const { id } = await request.json()
   const { error } = await sb.from('teams').delete().eq('id', id)
