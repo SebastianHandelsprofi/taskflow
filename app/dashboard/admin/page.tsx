@@ -5,10 +5,10 @@ import { createClient } from '@/lib/supabase/client'
 const TENANT_ID = '1aa1d675-232e-4375-b246-b41cb76f0beb'
 const BASE_URL = 'https://taskflow-two-livid.vercel.app'
 const TEAMS = ['Vertrieb', 'Produktion', 'Kundenservice', 'IT', 'Lager', 'Marketing', 'Geschäftsleitung', 'Küche']
-const ROLES = ['mitarbeiter', 'bereichsleiter', 'admin']
+const ROLES = ['mitarbeiter', 'bereichsleiter', 'geschaeftsfuehrung', 'admin']
 const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', outline: 'none' }
 const lbl: React.CSSProperties = { display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 5, letterSpacing: '0.08em', textTransform: 'uppercase' }
-const ROLE_COLORS: Record<string, string> = { 'admin': '#ff4d6d', 'bereichsleiter': '#ffd166', 'mitarbeiter': '#00d4aa' }
+const ROLE_COLORS: Record<string, string> = { 'admin': '#ff4d6d', 'bereichsleiter': '#ffd166', 'geschaeftsfuehrung': '#a855f7', 'mitarbeiter': '#00d4aa' }
 const TEAM_COLORS: Record<string, string> = { 'Vertrieb': '#6c63ff', 'Produktion': '#ff8c42', 'Kundenservice': '#00d4aa', 'IT': '#4ecdc4', 'Lager': '#ffd166', 'Marketing': '#ff6b9d', 'Geschäftsleitung': '#a855f7', 'Küche': '#ff8c42' }
 
 function useIsMobile() {
