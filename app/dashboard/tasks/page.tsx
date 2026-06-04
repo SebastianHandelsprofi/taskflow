@@ -158,9 +158,10 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
                   <label style={lbl}>Deadline</label>
                   <input type="date" style={inp} value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} disabled={!canEditMeta} />
                 </div>
-                <div>
+                {gamificationEnabled && <div>
                   <label style={lbl}>Punkte</label>
                   <input type="number" style={inp} value={form.points_value} onChange={e => setForm({ ...form, points_value: Number(e.target.value) })} disabled={!canEditMeta} />
+                </div>}
                 </div>
               </div>
               {isMA && (
@@ -234,6 +235,7 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<any>(null)
   const [form, setForm] = useState<any>(EMPTY)
   const [loading, setLoading] = useState(true)
+  const [tenant, setTenant] = useState<any>(null)
   const [saving, setSaving] = useState(false)
   const [errMsg, setErrMsg] = useState('')
   const isMobile = useIsMobile()
@@ -246,10 +248,10 @@ export default function TasksPage() {
   }
 
   const load = useCallback(async () => {
-    const [t, p, c] = await Promise.all([fetchTasks(), fetchProfiles(), fetch('/api/categories').then(r => r.json())])
+    const [t, p, c, ten] = await Promise.all([fetchTasks(), fetchProfiles(), fetch('/api/categories').then(r => r.json()), fetch('/api/tenant').then(r => r.json())])
     const hadOverdue = await markOverdue(t)
     if (hadOverdue) { const fresh = await fetchTasks(); setTasks(fresh) } else { setTasks(t) }
-    setProfiles(p); setCategories(c); setLoading(false)
+    setProfiles(p); setCategories(c); setTenant(ten); setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -278,6 +280,7 @@ export default function TasksPage() {
   const isMA = role === 'mitarbeiter'
   const canCreate = isAdmin || isGF || isBL || isMA
   const canSeeAll = isAdmin || isGF
+  const gamificationEnabled = tenant?.gamification_enabled ?? true
   const assignableProfiles = getAssignableProfiles(profiles, currentProfile)
 
   const viewFiltered = tasks.filter((t: any) => {
@@ -409,7 +412,7 @@ export default function TasksPage() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                       <span style={{ padding: '4px 10px', borderRadius: 12, background: sc.bg, color: sc.color, fontSize: 11, fontWeight: 600, border: `1px solid ${sc.color}44` }}>{task.status === 'Ueberfaellig' ? 'Überfällig' : task.status}</span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value} Pkt</span>
+                      {gamificationEnabled && <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value} Pkt</span>}
                     </div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -446,9 +449,10 @@ export default function TasksPage() {
                 <select value={task.status} onClick={e => e.stopPropagation()} onChange={e => { updateTask(task.id, { status: e.target.value }); load() }} style={{ padding: '4px 10px', borderRadius: 20, background: sc.bg, color: sc.color, border: `1px solid ${sc.color}44`, fontSize: 11, fontWeight: 600, cursor: 'pointer', outline: 'none' }}>
                   {STATUSES.map(s => <option key={s}>{s}</option>)}
                 </select>
-                <div style={{ textAlign: 'center', minWidth: 50 }}>
+                {gamificationEnabled && <div style={{ textAlign: 'center', minWidth: 50 }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)' }}>{task.points_value}</div>
                   <div style={{ fontSize: 10, color: 'var(--muted)' }}>Pkt</div>
+                </div>}
                 </div>
                 <div style={{ fontSize: 11, color: commentCount > 0 ? 'var(--accent)' : 'var(--muted)', fontWeight: commentCount > 0 ? 600 : 400, minWidth: 24 }}>💬{commentCount > 0 ? ` ${commentCount}` : ''}</div>
               </div>

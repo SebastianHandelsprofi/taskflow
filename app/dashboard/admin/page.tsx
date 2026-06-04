@@ -41,11 +41,13 @@ export default function AdminPage() {
   const [editRole, setEditRole] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirming, setConfirming] = useState<string | null>(null)
+  const [tenant, setTenant] = useState<any>(null)
   const isMobile = useIsMobile()
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }: any) => setUserId(data.user?.id ?? null))
     loadData()
+    fetch('/api/tenant').then(r => r.json()).then(setTenant)
   }, [])
 
   async function loadData() {
@@ -110,6 +112,7 @@ export default function AdminPage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
+  const gamificationEnabled = tenant?.gamification_enabled ?? true
   const pending = invitations.filter(i => !i.accepted)
   const accepted = invitations.filter(i => i.accepted)
   const unconfirmedUsers = authUsers.filter(u => !u.confirmed)
@@ -122,6 +125,11 @@ export default function AdminPage() {
     { id: 'sync', label: `Sync${usersWithoutProfile.length > 0 || unconfirmedUsers.length > 0 ? ' ⚠️' : ''}` },
   ]
 
+  // Tabellen-Header dynamisch je nach Gamification
+  const tableHeaders = gamificationEnabled
+    ? ['Name', 'Rolle', 'Abteilung', 'Punkte', 'Level', 'Status', 'Bearbeiten']
+    : ['Name', 'Rolle', 'Abteilung', 'Status', 'Bearbeiten']
+
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
@@ -129,7 +137,6 @@ export default function AdminPage() {
         <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>Mitarbeiter einladen und verwalten</p>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as any)} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${activeTab === t.id ? 'var(--accent)' : 'var(--border)'}`, background: activeTab === t.id ? 'var(--accent)' : 'transparent', color: activeTab === t.id ? '#fff' : 'var(--muted)', cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -142,7 +149,6 @@ export default function AdminPage() {
       {activeTab === 'team' && (
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
           {isMobile ? (
-            // Mobile: Karten
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {profiles.map((p: any, i: number) => (
                 <div key={p.id} style={{ padding: '12px 16px', borderBottom: i < profiles.length - 1 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -153,25 +159,21 @@ export default function AdminPage() {
                     <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.full_name}</div>
                     <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
                       <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: `${ROLE_COLORS[p.role]}22`, color: ROLE_COLORS[p.role], fontWeight: 600 }}>{p.role}</span>
-                      {p.abteilung
-                        ? <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: `${TEAM_COLORS[p.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[p.abteilung] || '#6c63ff', fontWeight: 600 }}>{p.abteilung}</span>
-                        : <span style={{ fontSize: 11, color: 'var(--red)' }}>⚠ Keine Abt.</span>
-                      }
+                      {p.abteilung ? <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: `${TEAM_COLORS[p.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[p.abteilung] || '#6c63ff', fontWeight: 600 }}>{p.abteilung}</span> : <span style={{ fontSize: 11, color: 'var(--red)' }}>⚠ Keine Abt.</span>}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flex: 'column', alignItems: 'flex-end', gap: 4 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{p.points}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    {gamificationEnabled && <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>{p.points}</div>}
                     <button onClick={() => { setEditingProfile(p); setEditAbteilung(p.abteilung || ''); setEditRole(p.role) }} style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 12 }}>✏️</button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            // Desktop: Tabelle
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
-                  {['Name', 'Rolle', 'Abteilung', 'Punkte', 'Level', 'Status', 'Bearbeiten'].map(h => (
+                  {tableHeaders.map(h => (
                     <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>{h}</th>
                   ))}
                 </tr>
@@ -189,8 +191,8 @@ export default function AdminPage() {
                     </td>
                     <td style={{ padding: '14px 16px' }}><span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${ROLE_COLORS[p.role]}22`, color: ROLE_COLORS[p.role] }}>{p.role}</span></td>
                     <td style={{ padding: '14px 16px' }}>{p.abteilung ? <span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: `${TEAM_COLORS[p.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[p.abteilung] || '#6c63ff' }}>{p.abteilung}</span> : <span style={{ color: 'var(--red)', fontSize: 11 }}>⚠ Keine</span>}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{p.points}</td>
-                    <td style={{ padding: '14px 16px', fontSize: 13, color: 'var(--muted)' }}>Lv.{p.level}</td>
+                    {gamificationEnabled && <td style={{ padding: '14px 16px', fontSize: 13, fontWeight: 600, color: 'var(--accent)' }}>{p.points}</td>}
+                    {gamificationEnabled && <td style={{ padding: '14px 16px', fontSize: 13, color: 'var(--muted)' }}>Lv.{p.level}</td>}
                     <td style={{ padding: '14px 16px' }}><span style={{ padding: '3px 10px', borderRadius: 4, fontSize: 11, fontWeight: 600, background: '#00d4aa22', color: '#00d4aa' }}>Aktiv</span></td>
                     <td style={{ padding: '14px 16px' }}><button onClick={() => { setEditingProfile(p); setEditAbteilung(p.abteilung || ''); setEditRole(p.role) }} style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 11 }}>✏️ Bearbeiten</button></td>
                   </tr>
@@ -227,8 +229,6 @@ export default function AdminPage() {
               </div>
             )}
           </div>
-
-          {/* Übersicht */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
             {[
               { label: 'Teammitglieder', value: profiles.length, color: 'var(--accent)' },
@@ -261,17 +261,11 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => copyLink(`${BASE_URL}/invite?token=${inv.token}`, inv.id)} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>
-                    {copied === inv.id ? '✅' : '📋'}
-                  </button>
-                  <button onClick={() => handleDeleteInvite(inv.id)} disabled={deleting === inv.id} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>
-                    {deleting === inv.id ? '...' : '🗑'}
-                  </button>
+                  <button onClick={() => copyLink(`${BASE_URL}/invite?token=${inv.token}`, inv.id)} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 13 }}>{copied === inv.id ? '✅' : '📋'}</button>
+                  <button onClick={() => handleDeleteInvite(inv.id)} disabled={deleting === inv.id} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 13 }}>{deleting === inv.id ? '...' : '🗑'}</button>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: new Date(inv.expires_at) < new Date() ? 'var(--red)' : 'var(--muted)' }}>
-                Läuft ab: {new Date(inv.expires_at).toLocaleDateString('de-DE')}
-              </div>
+              <div style={{ fontSize: 11, color: new Date(inv.expires_at) < new Date() ? 'var(--red)' : 'var(--muted)' }}>Läuft ab: {new Date(inv.expires_at).toLocaleDateString('de-DE')}</div>
             </div>
           ))}
         </div>
@@ -292,23 +286,17 @@ export default function AdminPage() {
               <div key={u.id} style={{ padding: '12px 16px', borderBottom: i < authUsers.length - 1 ? '1px solid var(--border)' : 'none', background: !u.profile ? '#ff4d6d08' : 'transparent' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.profile?.full_name || <span style={{ color: 'var(--red)' }}>⚠ Kein Profil</span>}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{u.profile?.full_name || <span style={{ color: 'var(--red)' }}>⚠ Kein Profil</span>}</div>
+                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{u.email}</div>
                     <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                       {u.profile?.abteilung && <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: `${TEAM_COLORS[u.profile.abteilung] || '#6c63ff'}22`, color: TEAM_COLORS[u.profile.abteilung] || '#6c63ff', fontWeight: 600 }}>{u.profile.abteilung}</span>}
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>Login: {u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString('de-DE') : '—'}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                    {!u.confirmed && (
-                      <button onClick={() => handleConfirmEmail(u.id)} disabled={confirming === u.id} style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #ffd16644', background: '#ffd16622', color: 'var(--yellow)', cursor: 'pointer', fontSize: 11 }}>
-                        {confirming === u.id ? '...' : '✉️'}
-                      </button>
-                    )}
+                    {!u.confirmed && <button onClick={() => handleConfirmEmail(u.id)} disabled={confirming === u.id} style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #ffd16644', background: '#ffd16622', color: 'var(--yellow)', cursor: 'pointer', fontSize: 11 }}>{confirming === u.id ? '...' : '✉️'}</button>}
                     {u.confirmed && <span style={{ fontSize: 14 }}>✅</span>}
-                    <button onClick={() => handleDeleteUser(u.id, u.profile?.full_name || u.email)} disabled={deleting === u.id} style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 11 }}>
-                      {deleting === u.id ? '...' : '🗑'}
-                    </button>
+                    <button onClick={() => handleDeleteUser(u.id, u.profile?.full_name || u.email)} disabled={deleting === u.id} style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #ff4d6d44', background: '#ff4d6d18', color: 'var(--red)', cursor: 'pointer', fontSize: 11 }}>{deleting === u.id ? '...' : '🗑'}</button>
                   </div>
                 </div>
               </div>
@@ -339,9 +327,7 @@ export default function AdminPage() {
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button onClick={() => setEditingProfile(null)} style={{ padding: '11px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>Abbrechen</button>
-              <button onClick={handleSaveProfile} disabled={saving} style={{ flex: isMobile ? 1 : 'none', padding: '11px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
-                {saving ? 'Speichere...' : 'Speichern'}
-              </button>
+              <button onClick={handleSaveProfile} disabled={saving} style={{ flex: isMobile ? 1 : 'none', padding: '11px 18px', borderRadius: 8, border: 'none', background: 'var(--accent)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>{saving ? 'Speichere...' : 'Speichern'}</button>
             </div>
           </div>
         </div>
