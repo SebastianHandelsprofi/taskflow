@@ -47,7 +47,8 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, logo_url: logoUrl || null, gamification_enabled: gamificationEnabled })
       })
-      const data = await res.json()
+      const text = await res.text()
+      const data = text ? JSON.parse(text) : {}
       if (data.error) throw new Error(data.error)
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
