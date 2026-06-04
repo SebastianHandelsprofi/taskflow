@@ -162,7 +162,7 @@ function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave
                   <label style={lbl}>Punkte</label>
                   <input type="number" style={inp} value={form.points_value} onChange={e => setForm({ ...form, points_value: Number(e.target.value) })} disabled={!canEditMeta} />
                 </div>}
-                </div>
+
               </div>
               {isMA && (
                 <div style={{ padding: '10px 14px', borderRadius: 8, background: 'var(--surface)', border: '1px solid var(--border)', fontSize: 12, color: 'var(--muted)' }}>
