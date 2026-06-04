@@ -76,8 +76,8 @@ export default function DashboardPage() {
 
   if (loading) return <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 60 }}>Lade Dashboard...</div>
 
-  const isAdmin = profile?.role === 'admin'
-  const isBereichsleiter = profile?.role === 'bereichsleiter'
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'geschaeftsfuehrung'
+  const isBereichsleiter = profile?.role === 'bereichsleiter' && profile?.role !== 'geschaeftsfuehrung'
   const abteilungColor = TEAM_COLORS[profile?.abteilung] || 'var(--accent)'
 
   const myTasks = tasks.filter((t: any) => t.assignee_id === profile?.id)

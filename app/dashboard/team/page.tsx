@@ -64,7 +64,7 @@ export default function TeamPage() {
 
   if (loading) return <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Lade Team...</div>
 
-  const isAdmin = currentProfile?.role === 'admin'
+  const isAdmin = currentProfile?.role === 'admin' || currentProfile?.role === 'geschaeftsfuehrung'
   const isBereichsleiter = currentProfile?.role === 'bereichsleiter'
 
   const visibleProfiles = isAdmin
