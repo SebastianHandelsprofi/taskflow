@@ -8,9 +8,7 @@ const TEAM_COLORS: Record<string, string> = {
   'Geschäftsleitung': '#a855f7', 'Küche': '#ff8c42',
 }
 
-function getColor(abteilung: string) {
-  return TEAM_COLORS[abteilung] || '#6c63ff'
-}
+function getColor(abteilung: string) { return TEAM_COLORS[abteilung] || '#6c63ff' }
 
 function Avatar({ name, color, size = 36 }: { name: string; color: string; size?: number }) {
   const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
@@ -33,26 +31,25 @@ function useIsMobile() {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  'admin': '#ff4d6d', 'bereichsleiter': '#ffd166', 'mitarbeiter': '#00d4aa'
+  'admin': '#ff4d6d', 'bereichsleiter': '#ffd166', 'geschaeftsfuehrung': '#a855f7', 'mitarbeiter': '#00d4aa'
 }
 
 export default function TeamPage() {
   const [profiles, setProfiles] = useState<any[]>([])
   const [tasks, setTasks] = useState<any[]>([])
   const [currentProfile, setCurrentProfile] = useState<any>(null)
+  const [tenant, setTenant] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const isMobile = useIsMobile()
 
   useEffect(() => {
-    Promise.all([fetch('/api/profiles'), fetch('/api/tasks')])
-      .then(async ([pRes, tRes]) => {
-        const p = await pRes.json()
-        const t = await tRes.json()
-        setProfiles(p)
-        setTasks(t)
+    Promise.all([fetch('/api/profiles'), fetch('/api/tasks'), fetch('/api/tenant')])
+      .then(async ([pRes, tRes, tenantRes]) => {
+        setProfiles(await pRes.json())
+        setTasks(await tRes.json())
+        setTenant(await tenantRes.json())
         setLoading(false)
       })
-
     createClient().auth.getUser().then(async ({ data }: any) => {
       if (data.user) {
         const res = await fetch('/api/profiles')
@@ -65,7 +62,7 @@ export default function TeamPage() {
   if (loading) return <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 40 }}>Lade Team...</div>
 
   const isAdmin = currentProfile?.role === 'admin' || currentProfile?.role === 'geschaeftsfuehrung'
-  const isBereichsleiter = currentProfile?.role === 'bereichsleiter'
+  const gamificationEnabled = tenant?.gamification_enabled ?? true
 
   const visibleProfiles = isAdmin
     ? profiles
@@ -82,7 +79,6 @@ export default function TeamPage() {
     const memberTasks = tasks.filter(t => t.assignee_id === userId)
     return {
       total: memberTasks.length,
-      offen: memberTasks.filter(t => t.status === 'Offen').length,
       inBearbeitung: memberTasks.filter(t => t.status === 'In Bearbeitung').length,
       erledigt: memberTasks.filter(t => t.status === 'Erledigt').length,
       ueberfaellig: memberTasks.filter(t => t.status === 'Ueberfaellig').length,
@@ -108,7 +104,6 @@ export default function TeamPage() {
 
           return (
             <div key={abteilung} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderLeft: `4px solid ${color}`, borderRadius: 12, overflow: 'hidden' }}>
-              {/* Abteilung Header */}
               <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `${color}08` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}22`, border: `2px solid ${color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color }}>
@@ -123,37 +118,18 @@ export default function TeamPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 12, textAlign: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color }}>{totalTasks}</div>
-                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>Aufg.</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>{doneTasks}</div>
-                    <div style={{ fontSize: 10, color: 'var(--muted)' }}>Erl.</div>
-                  </div>
-                  {overdueTasks > 0 && (
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--red)' }}>{overdueTasks}</div>
-                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>Überf.</div>
-                    </div>
-                  )}
+                  <div><div style={{ fontSize: 16, fontWeight: 700, color }}>{totalTasks}</div><div style={{ fontSize: 10, color: 'var(--muted)' }}>Aufg.</div></div>
+                  <div><div style={{ fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>{doneTasks}</div><div style={{ fontSize: 10, color: 'var(--muted)' }}>Erl.</div></div>
+                  {overdueTasks > 0 && <div><div style={{ fontSize: 16, fontWeight: 700, color: 'var(--red)' }}>{overdueTasks}</div><div style={{ fontSize: 10, color: 'var(--muted)' }}>Überf.</div></div>}
                 </div>
               </div>
 
-              {/* Mitglieder — kompakte Liste */}
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 {members.map((member, i) => {
                   const stats = getMemberStats(member.id)
                   const isMe = member.id === currentProfile?.id
                   return (
-                    <div key={member.id} style={{
-                      padding: '10px 16px',
-                      borderBottom: i < members.length - 1 ? '1px solid var(--border)' : 'none',
-                      background: isMe ? `${color}08` : 'transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                    }}>
+                    <div key={member.id} style={{ padding: '10px 16px', borderBottom: i < members.length - 1 ? '1px solid var(--border)' : 'none', background: isMe ? `${color}08` : 'transparent', display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar name={member.full_name} color={color} size={32} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -161,15 +137,17 @@ export default function TeamPage() {
                           {isMe && <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: `${color}22`, color, fontWeight: 700, flexShrink: 0 }}>ICH</span>}
                         </div>
                         <div style={{ display: 'flex', gap: 6, marginTop: 2, alignItems: 'center' }}>
-                          <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: `${ROLE_COLORS[member.role]}22`, color: ROLE_COLORS[member.role], fontWeight: 600 }}>{member.role}</span>
-                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>Lv.{member.level}</span>
+                          <span style={{ fontSize: 11, padding: '1px 6px', borderRadius: 4, background: `${ROLE_COLORS[member.role] || '#6c63ff'}22`, color: ROLE_COLORS[member.role] || '#6c63ff', fontWeight: 600 }}>{member.role}</span>
+                          {gamificationEnabled && <span style={{ fontSize: 11, color: 'var(--muted)' }}>Lv.{member.level}</span>}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <div style={{ fontSize: 14, fontWeight: 700, color }}>{member.points}</div>
-                          <div style={{ fontSize: 9, color: 'var(--muted)' }}>Pkt</div>
-                        </div>
+                        {gamificationEnabled && (
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color }}>{member.points}</div>
+                            <div style={{ fontSize: 9, color: 'var(--muted)' }}>Pkt</div>
+                          </div>
+                        )}
                         {stats.total > 0 && (
                           <div style={{ display: 'flex', gap: 4 }}>
                             {stats.ueberfaellig > 0 && <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4, background: '#ff4d6d22', color: 'var(--red)', fontWeight: 600 }}>{stats.ueberfaellig}⚠</span>}
