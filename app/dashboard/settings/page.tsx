@@ -75,7 +75,7 @@ export default function SettingsPage() {
               <button onClick={() => fileRef.current?.click()} disabled={uploading} style={{ padding: '10px 18px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontSize: 13, fontWeight: 600, marginBottom: 8, width: '100%' }}>
                 {uploading ? '⏳ Lädt hoch...' : '📁 Logo hochladen'}
               </button>
-              <input ref={fileRef} type="file" accept="image/png,image/jpg,image/jpeg,image/svg+xml" onChange={handleLogoUpload} style={{ display: 'none' }} />
+              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/svg+xml" onChange={handleLogoUpload} style={{ display: 'none' }} />
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>PNG, JPG oder SVG · Max 2MB · Empfohlen: 200x200px</div>
               {logoUrl && <button onClick={() => setLogoUrl('')} style={{ marginTop: 6, fontSize: 11, color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕ Logo entfernen</button>}
             </div>
