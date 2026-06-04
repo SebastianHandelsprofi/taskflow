@@ -45,7 +45,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/tenant', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, logo_url: logoUrl, gamification_enabled: gamificationEnabled })
+        body: JSON.stringify({ name, logo_url: logoUrl || null, gamification_enabled: gamificationEnabled })
       })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
