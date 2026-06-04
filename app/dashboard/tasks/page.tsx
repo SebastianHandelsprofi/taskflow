@@ -59,7 +59,7 @@ function getAssignableProfiles(profiles: any[], currentProfile: any) {
   return profiles.filter((p: any) => p.id === currentProfile.id)
 }
 
-function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave, onDelete }: any) {
+function TaskModal({ task, profiles, categories, currentProfile, onClose, onSave, onDelete, gamificationEnabled }: any) {
   const [form, setForm] = useState({ ...task, assignee_id: task.assignee_id || '', deadline: task.deadline || '' })
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
@@ -520,7 +520,7 @@ export default function TasksPage() {
       )}
 
       {selectedTask && (
-        <TaskModal task={selectedTask} profiles={profiles} categories={categories} currentProfile={currentProfile} onClose={() => setSelectedTask(null)} onSave={handleSaveTask} onDelete={(id: string) => { deleteTask(id); load() }} />
+        <TaskModal task={selectedTask} profiles={profiles} categories={categories} currentProfile={currentProfile} onClose={() => setSelectedTask(null)} onSave={handleSaveTask} onDelete={(id: string) => { deleteTask(id); load() }} gamificationEnabled={gamificationEnabled} />
       )}
     </div>
   )
