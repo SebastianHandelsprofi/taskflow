@@ -3,12 +3,13 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 
-const NAV = [
+const NAV_BASE = [
   { href: '/dashboard', icon: '◉', label: 'Dashboard' },
   { href: '/dashboard/tasks', icon: '◈', label: 'Aufgaben' },
   { href: '/dashboard/team', icon: '◎', label: 'Team' },
-  { href: '/dashboard/gamification', icon: '◆', label: 'Rangliste' },
 ]
+
+const NAV_GAMIFICATION = { href: '/dashboard/gamification', icon: '◆', label: 'Rangliste' }
 
 const ADMIN_NAV = [
   { href: '/dashboard/admin', icon: '⚙', label: 'Team verwalten' },
@@ -34,10 +35,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     createClient().auth.getUser().then(async ({ data }: any) => {
       if (data.user) {
-        const [profRes, tenantRes] = await Promise.all([
-          fetch('/api/profiles'),
-          fetch('/api/tenant')
-        ])
+        const [profRes, tenantRes] = await Promise.all([fetch('/api/profiles'), fetch('/api/tenant')])
         const profiles = await profRes.json()
         const tenantData = await tenantRes.json()
         const me = profiles.find((p: any) => p.id === data.user.id)
@@ -53,6 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const isAdmin = profile?.role === 'admin'
+  const gamificationEnabled = tenant?.gamification_enabled ?? true
+  const NAV = gamificationEnabled ? [...NAV_BASE, NAV_GAMIFICATION] : NAV_BASE
 
   if (isMobile) {
     return (
@@ -63,8 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
                 {tenant?.logo_url
                   ? <img src={tenant.logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 2 }} />
-                  : <span style={{ fontSize: 24 }}>🏢</span>
-                }
+                  : <span style={{ fontSize: 24 }}>🏢</span>}
               </div>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, lineHeight: 1.2 }}>{tenant?.name || 'Ihr Unternehmen'}</div>
@@ -99,9 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div style={{ margin: '8px 0', borderTop: '1px solid var(--border)' }} />
               </>
             )}
-            <button onClick={handleSignOut} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--red)', cursor: 'pointer', fontSize: 14, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>
-              ← Abmelden
-            </button>
+            <button onClick={handleSignOut} style={{ width: '100%', padding: '12px 14px', borderRadius: 8, border: 'none', background: 'transparent', color: 'var(--red)', cursor: 'pointer', fontSize: 14, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10 }}>← Abmelden</button>
           </div>
         )}
 
@@ -124,28 +121,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  // Desktop — Logo volle Breite oben
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <aside style={{ width: 220, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-
-        {/* Logo volle Breite */}
         <div style={{ borderBottom: '1px solid var(--border)' }}>
-          {/* Logo Banner */}
           <div style={{ width: '100%', height: 100, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '12px 16px' }}>
             {tenant?.logo_url
               ? <img src={tenant.logo_url} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-              : <span style={{ fontSize: 48 }}>🏢</span>
-            }
+              : <span style={{ fontSize: 48 }}>🏢</span>}
           </div>
-
-          {/* Unternehmensname */}
           <div style={{ padding: '10px 16px', textAlign: 'center', borderTop: '1px solid var(--border)' }}>
             <div style={{ fontSize: 14, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tenant?.name || 'Ihr Unternehmen'}</div>
             <div style={{ fontSize: 10, color: 'var(--muted)' }}>Ihr Unternehmen</div>
           </div>
-
-          {/* TaskFlow klein */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderTop: '1px solid var(--border)', background: 'var(--card)' }}>
             <div style={{ width: 20, height: 20, borderRadius: 5, background: 'linear-gradient(135deg, #6c63ff, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 900, color: '#fff', flexShrink: 0 }}>TF</div>
             <div>
@@ -155,7 +143,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
 
-        {/* Navigation */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
           {NAV.map(n => {
             const active = pathname === n.href
@@ -185,7 +172,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </div>
 
-        {/* User + Abmelden */}
         <div style={{ borderTop: '1px solid var(--border)' }}>
           {profile && (
             <div style={{ padding: '12px 20px' }}>
