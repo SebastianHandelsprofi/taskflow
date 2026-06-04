@@ -19,7 +19,7 @@ export default function LoginPage() {
     if (!tenantSlug) return
     const sb = createClient()
     sb.from('tenants').select('name, slug').eq('slug', tenantSlug).single()
-      .then(({ data }) => { if (data) setTenant(data) })
+      .then(({ data }: { data: any }) => { if (data) setTenant(data) })
   }, [tenantSlug])
 
   async function handleSubmit() {
